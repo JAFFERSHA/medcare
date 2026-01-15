@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/medicine-reminders",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/stock-alerts",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

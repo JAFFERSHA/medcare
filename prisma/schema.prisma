@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  mobile    String   @unique
+  name      String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patientMedicines  PatientMedicine[]
+  medicineIntakes   MedicineIntake[]
+  pushSubscriptions PushSubscription[]
+  notifications     Notification[]
+  notificationPrefs NotificationPreference?
+  otpRequests       OTPRequest[]
+}
+
+model OTPRequest {
+  id        String   @id @default(cuid())
+  mobile    String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  @@index([mobile, otp])
+}
+
+model Medicine {
+  id           String     @id @default(cuid())
+  name         String
+  genericName  String?
+  description  String?
+  manufacturer String?
+  dosageForm   DosageForm @default(TABLET)
+  strength     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  patientMedicines PatientMedicine[]
+
+  @@index([name])
+}
+
+enum DosageForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  INJECTION
+  CREAM
+  DROPS
+  INHALER
+  OTHER
+}
+
+model PatientMedicine {
+  id         String @id @default(cuid())
+  userId     String
+  medicineId String
+
+  // Stock Information
+  currentStock    Int    @default(0)
+  unitType        String @default("tablets")
+  dosagePerIntake Float  @default(1)
+
+  // Schedule Information
+  frequency     Frequency @default(DAILY)
+  timesPerDay   Int       @default(1)
+  scheduleTimes String[]
+  specificDays  Int[]
+
+  // Alert Settings
+  lowStockThreshold     Int     @default(7)
+  reminderEnabled       Boolean @default(true)
+  stockAlertEnabled     Boolean @default(true)
+  reminderMinutesBefore Int     @default(5)
+
+  // Metadata
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicine     Medicine         @relation(fields: [medicineId], references: [id])
+  intakes      MedicineIntake[]
+  stockHistory StockHistory[]
+
+  @@unique([userId, medicineId])
+  @@index([userId])
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  AS_NEEDED
+  CUSTOM
+}
+
+model MedicineIntake {
+  id                String @id @default(cuid())
+  patientMedicineId String
+  userId            String
+
+  scheduledTime DateTime
+  takenAt       DateTime?
+  status        IntakeStatus @default(PENDING)
+  dosageTaken   Float?
+  notes         String?
+  skippedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patientMedicine PatientMedicine @relation(fields: [patientMedicineId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scheduledTime])
+  @@index([patientMedicineId])
+}
+
+enum IntakeStatus {
+  PENDING
+  TAKEN
+  SKIPPED
+  MISSED
+}
+
+model StockHistory {
+  id                String @id @default(cuid())
+  patientMedicineId String
+
+  changeType    StockChangeType
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  notes         String?
+
+  createdAt DateTime @default(now())
+
+  patientMedicine PatientMedicine @relation(fields: [patientMedicineId], references: [id], onDelete: Cascade)
+
+  @@index([patientMedicineId])
+}
+
+enum StockChangeType {
+  PURCHASE
+  INTAKE
+  ADJUSTMENT
+  EXPIRED
+  LOST
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Email Preferences
+  emailEnabled        Boolean @default(true)
+  emailForReminders   Boolean @default(true)
+  emailForStockAlerts Boolean @default(true)
+
+  // Push Preferences
+  pushEnabled        Boolean @default(true)
+  pushForReminders   Boolean @default(true)
+  pushForStockAlerts Boolean @default(true)
+
+  // Sound Preferences
+  soundEnabled Boolean @default(true)
+
+  // Quiet Hours
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   String?
+  quietHoursEnd     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id      String              @id @default(cuid())
+  userId  String
+  type    NotificationType
+  channel NotificationChannel
+  title   String
+  body    String
+  data    Json?
+  status  NotificationStatus  @default(PENDING)
+  sentAt  DateTime?
+  readAt  DateTime?
+  error   String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([status])
+}
+
+enum NotificationType {
+  MEDICINE_REMINDER
+  STOCK_ALERT
+  STOCK_OUT
+  WELCOME
+  SYSTEM
+}
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
