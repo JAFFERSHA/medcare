@@ -7,9 +7,9 @@ const recordIntakeSchema = z.object({
   patientMedicineId: z.string(),
   scheduledTime: z.string().datetime(),
   status: z.enum(["TAKEN", "SKIPPED"]),
-  dosageTaken: z.number().positive().optional(),
-  notes: z.string().optional(),
-  skippedReason: z.string().optional(),
+  dosageTaken: z.number().positive().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  skippedReason: z.string().nullable().optional(),
 });
 
 // GET - Get intake history

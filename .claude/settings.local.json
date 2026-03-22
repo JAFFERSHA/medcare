@@ -9,7 +9,17 @@
       "Bash(npx prisma db push:*)",
       "Bash(npx prisma generate:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel --version)",
+      "Bash(npx vercel env add:*)",
+      "Bash(printf:*)",
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:resend.com)",
+      "Bash(vercel env add:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(curl:*)"
     ]
   }
 }

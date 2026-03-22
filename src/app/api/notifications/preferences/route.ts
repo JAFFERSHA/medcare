@@ -12,8 +12,8 @@ const updatePrefsSchema = z.object({
   pushForStockAlerts: z.boolean().optional(),
   soundEnabled: z.boolean().optional(),
   quietHoursEnabled: z.boolean().optional(),
-  quietHoursStart: z.string().optional(),
-  quietHoursEnd: z.string().optional(),
+  quietHoursStart: z.string().nullish(),
+  quietHoursEnd: z.string().nullish(),
 });
 
 export async function GET(request: Request) {

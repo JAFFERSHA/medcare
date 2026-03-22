@@ -7,8 +7,15 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const adapter = new PrismaPg(pool);
+  const connectionString = process.env.DATABASE_URL;
+  // Add schema to connection string if not present
+  const url = new URL(connectionString!);
+  if (!url.searchParams.has("schema")) {
+    url.searchParams.set("schema", "medcare");
+  }
+
+  const pool = new Pool({ connectionString: url.toString() });
+  const adapter = new PrismaPg(pool, { schema: "medcare" });
 
   return new PrismaClient({
     adapter,

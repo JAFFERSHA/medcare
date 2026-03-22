@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const now = new Date();
-  const windowStart = subMinutes(now, 2);
-  const windowEnd = addMinutes(now, 3);
+  const windowStart = subMinutes(now, 1);
+  const windowEnd = addMinutes(now, 1);
 
   try {
     // Find all active medicines
@@ -146,7 +146,7 @@ export async function GET() {
       success: true,
       timestamp: now.toISOString(),
       processed: remindersToSend.length,
-      results: results.map((r) => r.status),
+      results: results.map((r: PromiseSettledResult<unknown>) => r.status),
     });
   } catch (error) {
     console.error("Reminder cron error:", error);

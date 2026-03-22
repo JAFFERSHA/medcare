@@ -166,7 +166,7 @@ export default function AddMedicinePage() {
                   name="dosageForm"
                   value={formData.dosageForm}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {DOSAGE_FORMS.map((form) => (
                     <option key={form.value} value={form.value}>
@@ -250,7 +250,7 @@ export default function AddMedicinePage() {
                 name="frequency"
                 value={formData.frequency}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {FREQUENCIES.map((freq) => (
                   <option key={freq.value} value={freq.value}>
@@ -271,7 +271,7 @@ export default function AddMedicinePage() {
                       type="time"
                       value={time}
                       onChange={(e) => updateScheduleTime(index, e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {formData.scheduleTimes.length > 1 && (
                       <button
@@ -337,7 +337,7 @@ export default function AddMedicinePage() {
               onChange={handleChange}
               placeholder="Any additional notes about this medicine..."
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </CardContent>
         </Card>

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 const addStockSchema = z.object({
   patientMedicineId: z.string(),
   quantity: z.number().int().positive("Quantity must be positive"),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 // POST - Add stock to medicine

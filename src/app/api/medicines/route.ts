@@ -3,14 +3,23 @@ import { z } from "zod";
 import { isZodError, getZodErrorMessage } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 
+type PatientMedicineWithMedicine = Awaited<
+  ReturnType<typeof prisma.patientMedicine.findMany<{
+    include: {
+      medicine: true;
+      intakes: true;
+    };
+  }>>
+>[number];
+
 const createMedicineSchema = z.object({
   name: z.string().min(1, "Medicine name is required"),
-  genericName: z.string().optional(),
-  description: z.string().optional(),
+  genericName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   dosageForm: z
     .enum(["TABLET", "CAPSULE", "SYRUP", "INJECTION", "CREAM", "DROPS", "INHALER", "OTHER"])
     .default("TABLET"),
-  strength: z.string().optional(),
+  strength: z.string().nullable().optional(),
   currentStock: z.number().int().min(0).default(0),
   unitType: z.string().default("tablets"),
   dosagePerIntake: z.number().positive().default(1),
@@ -21,7 +30,7 @@ const createMedicineSchema = z.object({
   lowStockThreshold: z.number().int().min(1).default(7),
   reminderEnabled: z.boolean().default(true),
   stockAlertEnabled: z.boolean().default(true),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 // GET - List all patient medicines
@@ -51,7 +60,7 @@ export async function GET(request: Request) {
     });
 
     // Calculate days until stock runs out
-    const medicinesWithStockInfo = medicines.map((pm) => {
+    const medicinesWithStockInfo = medicines.map((pm: PatientMedicineWithMedicine) => {
       const dailyUsage = pm.dosagePerIntake * pm.timesPerDay;
       const daysRemaining = dailyUsage > 0 ? Math.floor(pm.currentStock / dailyUsage) : Infinity;
       const runOutDate = new Date();

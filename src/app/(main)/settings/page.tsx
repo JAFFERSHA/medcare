@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Settings, User, Bell, Mail, Volume2 } from "lucide-react";
+import { Settings, User, Bell, Mail, Volume2, Play } from "lucide-react";
+import { playNotificationSound, playAlertSound } from "@/lib/sound";
 
 interface UserProfile {
   id: string;
@@ -393,6 +394,25 @@ export default function SettingsPage() {
                 Play sound for reminders
               </span>
             </label>
+
+            <div className="flex gap-2 pl-6 mt-2">
+              <button
+                type="button"
+                onClick={() => playNotificationSound()}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                <Play className="w-3 h-3" />
+                Test Reminder
+              </button>
+              <button
+                type="button"
+                onClick={() => playAlertSound()}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+              >
+                <Play className="w-3 h-3" />
+                Test Alert
+              </button>
+            </div>
           </div>
 
           <Button onClick={handleSaveNotifications} loading={saving}>

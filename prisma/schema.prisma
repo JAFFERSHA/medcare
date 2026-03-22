@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["medcare"]
 }
 
 model User {
@@ -20,6 +21,8 @@ model User {
   notifications     Notification[]
   notificationPrefs NotificationPreference?
   otpRequests       OTPRequest[]
+
+  @@schema("medcare")
 }
 
 model OTPRequest {
@@ -34,6 +37,7 @@ model OTPRequest {
   userId String?
 
   @@index([mobile, otp])
+  @@schema("medcare")
 }
 
 model Medicine {
@@ -50,6 +54,7 @@ model Medicine {
   patientMedicines PatientMedicine[]
 
   @@index([name])
+  @@schema("medcare")
 }
 
 enum DosageForm {
@@ -61,6 +66,8 @@ enum DosageForm {
   DROPS
   INHALER
   OTHER
+
+  @@schema("medcare")
 }
 
 model PatientMedicine {
@@ -100,6 +107,7 @@ model PatientMedicine {
 
   @@unique([userId, medicineId])
   @@index([userId])
+  @@schema("medcare")
 }
 
 enum Frequency {
@@ -108,6 +116,8 @@ enum Frequency {
   MONTHLY
   AS_NEEDED
   CUSTOM
+
+  @@schema("medcare")
 }
 
 model MedicineIntake {
@@ -130,6 +140,7 @@ model MedicineIntake {
 
   @@index([userId, scheduledTime])
   @@index([patientMedicineId])
+  @@schema("medcare")
 }
 
 enum IntakeStatus {
@@ -137,6 +148,8 @@ enum IntakeStatus {
   TAKEN
   SKIPPED
   MISSED
+
+  @@schema("medcare")
 }
 
 model StockHistory {
@@ -154,6 +167,7 @@ model StockHistory {
   patientMedicine PatientMedicine @relation(fields: [patientMedicineId], references: [id], onDelete: Cascade)
 
   @@index([patientMedicineId])
+  @@schema("medcare")
 }
 
 enum StockChangeType {
@@ -162,6 +176,8 @@ enum StockChangeType {
   ADJUSTMENT
   EXPIRED
   LOST
+
+  @@schema("medcare")
 }
 
 model PushSubscription {
@@ -178,6 +194,7 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@schema("medcare")
 }
 
 model NotificationPreference {
@@ -206,6 +223,8 @@ model NotificationPreference {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@schema("medcare")
 }
 
 model Notification {
@@ -227,6 +246,7 @@ model Notification {
 
   @@index([userId, type])
   @@index([status])
+  @@schema("medcare")
 }
 
 enum NotificationType {
@@ -235,12 +255,16 @@ enum NotificationType {
   STOCK_OUT
   WELCOME
   SYSTEM
+
+  @@schema("medcare")
 }
 
 enum NotificationChannel {
   EMAIL
   PUSH
   IN_APP
+
+  @@schema("medcare")
 }
 
 enum NotificationStatus {
@@ -249,4 +273,6 @@ enum NotificationStatus {
   DELIVERED
   FAILED
   READ
+
+  @@schema("medcare")
 }

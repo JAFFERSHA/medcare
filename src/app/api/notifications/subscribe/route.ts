@@ -9,7 +9,7 @@ const subscriptionSchema = z.object({
     p256dh: z.string(),
     auth: z.string(),
   }),
-  userAgent: z.string().optional(),
+  userAgent: z.string().nullable().optional(),
 });
 
 export async function POST(request: Request) {

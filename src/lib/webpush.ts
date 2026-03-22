@@ -65,8 +65,8 @@ export function getMedicineReminderPush(
   return {
     title: "Medicine Reminder",
     body: `Time to take ${medicineName} (${time})`,
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/badge-72x72.png",
+    icon: "/icons/icon-192x192.svg",
+    badge: "/icons/badge-72x72.svg",
     data: { type: "MEDICINE_REMINDER", url: "/dashboard" },
     actions: [
       { action: "take", title: "Mark as Taken" },
@@ -82,8 +82,8 @@ export function getStockAlertPush(
   return {
     title: "Low Stock Alert",
     body: `${medicineName} - Only ${daysRemaining} days supply left!`,
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/badge-72x72.png",
+    icon: "/icons/icon-192x192.svg",
+    badge: "/icons/badge-72x72.svg",
     data: { type: "STOCK_ALERT", url: "/medicines" },
     actions: [{ action: "view", title: "View Details" }],
   };

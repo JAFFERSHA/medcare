@@ -13,7 +13,7 @@ const updateMedicineSchema = z.object({
   lowStockThreshold: z.number().int().min(1).optional(),
   reminderEnabled: z.boolean().optional(),
   stockAlertEnabled: z.boolean().optional(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

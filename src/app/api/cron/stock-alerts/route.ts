@@ -5,6 +5,20 @@ import { sendPushNotification, getStockAlertPush } from "@/lib/webpush";
 
 export const dynamic = "force-dynamic";
 
+type PatientMedicineWithRelations = Awaited<
+  ReturnType<typeof prisma.patientMedicine.findMany<{
+    include: {
+      medicine: true;
+      user: {
+        include: {
+          pushSubscriptions: { where: { isActive: true } };
+          notificationPrefs: true;
+        };
+      };
+    };
+  }>>
+>[number];
+
 export async function GET() {
   try {
     // Find all active medicines
@@ -25,7 +39,7 @@ export async function GET() {
     });
 
     // Filter for low stock medicines
-    const lowStockMedicines = patientMedicines.filter((pm) => {
+    const lowStockMedicines = patientMedicines.filter((pm: PatientMedicineWithRelations) => {
       const dailyUsage = pm.dosagePerIntake * pm.timesPerDay;
       if (dailyUsage === 0) return false;
       const daysRemaining = Math.floor(pm.currentStock / dailyUsage);
@@ -33,12 +47,12 @@ export async function GET() {
     });
 
     const outOfStockMedicines = patientMedicines.filter(
-      (pm) => pm.currentStock <= 0
+      (pm: PatientMedicineWithRelations) => pm.currentStock <= 0
     );
 
     // Send notifications for low stock
     const results = await Promise.allSettled(
-      lowStockMedicines.map(async (pm) => {
+      lowStockMedicines.map(async (pm: PatientMedicineWithRelations) => {
         const prefs = pm.user.notificationPrefs;
         const dailyUsage = pm.dosagePerIntake * pm.timesPerDay;
         const daysRemaining = Math.floor(pm.currentStock / dailyUsage);
@@ -123,7 +137,7 @@ export async function GET() {
       lowStock: lowStockMedicines.length,
       outOfStock: outOfStockMedicines.length,
       processed: results.length,
-      results: results.map((r) => r.status),
+      results: results.map((r: PromiseSettledResult<unknown>) => r.status),
     });
   } catch (error) {
     console.error("Stock alert cron error:", error);

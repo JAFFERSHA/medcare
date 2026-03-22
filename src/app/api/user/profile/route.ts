@@ -4,8 +4,8 @@ import { isZodError, getZodErrorMessage } from "@/lib/validations";
 import { prisma } from "@/lib/prisma";
 
 const updateProfileSchema = z.object({
-  name: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
+  name: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional().or(z.literal("")),
 });
 
 export async function PATCH(request: Request) {
