@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="24" fill="url(#bg)"/>
+  <!-- Pill / Capsule shape -->
+  <rect x="8" y="18" width="32" height="12" rx="6" fill="white" opacity="0.15"/>
+  <!-- Left half of pill -->
+  <path d="M8 24C8 20.686 10.686 18 14 18H24V30H14C10.686 30 8 27.314 8 24Z" fill="white" opacity="0.9"/>
+  <!-- Right half of pill -->
+  <path d="M24 18H34C37.314 18 40 20.686 40 24C40 27.314 37.314 30 34 30H24V18Z" fill="white" opacity="0.3"/>
+  <!-- Center divider line -->
+  <line x1="24" y1="18" x2="24" y2="30" stroke="white" stroke-width="1" opacity="0.6"/>
+  <!-- Plus cross above -->
+  <rect x="21.5" y="10" width="5" height="14" rx="2.5" fill="white" opacity="0.4"/>
+  <rect x="17" y="14.5" width="14" height="5" rx="2.5" fill="white" opacity="0.4"/>
+  <!-- Gradient def -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { OTPInput } from "@/components/auth/OTPInput";
-import { Pill } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 type AuthMode = "phone" | "email";
 type PhoneStep = "phone" | "otp";
@@ -144,8 +144,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Pill className="w-8 h-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center mb-3">
+            <Image src="/icons/medcare-logo.svg" alt="MedCare" width={64} height={64} className="rounded-2xl shadow-md" priority />
           </div>
           <h1 className="text-3xl font-bold text-gray-900">MedCare</h1>
           <p className="text-gray-600 mt-2">Your personal medicine management assistant</p>

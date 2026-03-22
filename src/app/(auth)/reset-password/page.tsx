@@ -4,8 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Pill } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -113,8 +113,8 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Pill className="w-8 h-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center mb-3">
+            <Image src="/icons/medcare-logo.svg" alt="MedCare" width={64} height={64} className="rounded-2xl shadow-md" priority />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
           <p className="text-gray-600 mt-2">Enter your new password below</p>
