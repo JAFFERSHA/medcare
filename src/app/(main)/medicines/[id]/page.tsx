@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/hooks/useToast";
 
 interface Medicine {
   id: string;
@@ -60,6 +61,7 @@ interface Medicine {
 export default function MedicineDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const [medicine, setMedicine] = useState<Medicine | null>(null);
   const [loading, setLoading] = useState(true);
   const [addStockAmount, setAddStockAmount] = useState(0);
@@ -92,7 +94,7 @@ export default function MedicineDetailPage() {
     setAddingStock(true);
 
     try {
-      await fetch("/api/stock", {
+      const res = await fetch("/api/stock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -101,10 +103,15 @@ export default function MedicineDetailPage() {
           notes: "Stock refill",
         }),
       });
-      setAddStockAmount(0);
-      fetchMedicine();
-    } catch (error) {
-      console.error("Error adding stock:", error);
+      if (res.ok) {
+        toast.success(`Added ${addStockAmount} units to stock!`);
+        setAddStockAmount(0);
+        fetchMedicine();
+      } else {
+        toast.error("Failed to add stock");
+      }
+    } catch {
+      toast.error("Error adding stock");
     } finally {
       setAddingStock(false);
     }
@@ -114,10 +121,10 @@ export default function MedicineDetailPage() {
     setDeleting(true);
     try {
       await fetch(`/api/medicines/${params.id}`, { method: "DELETE" });
+      toast.success("Medicine removed");
       router.push("/medicines");
-    } catch (error) {
-      console.error("Error deleting medicine:", error);
-    } finally {
+    } catch {
+      toast.error("Failed to remove medicine");
       setDeleting(false);
     }
   };

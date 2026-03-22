@@ -53,7 +53,7 @@ export async function verifyOTP(
   });
 
   // Generate JWT
-  const token = await signJWT({ userId: user.id, mobile: user.mobile });
+  const token = await signJWT({ userId: user.id, mobile: user.mobile ?? undefined });
 
   return { success: true, token, message: "Login successful" };
 }

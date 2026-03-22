@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, getMedicineReminderEmail } from "@/lib/resend";
+import { sendEmail, getMedicineReminderEmail } from "@/lib/email";
 import { sendPushNotification, getMedicineReminderPush } from "@/lib/webpush";
 import { format, addMinutes, subMinutes } from "date-fns";
 

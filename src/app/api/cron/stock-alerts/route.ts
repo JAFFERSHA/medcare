@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, getStockAlertEmail } from "@/lib/resend";
+import { sendEmail, getStockAlertEmail } from "@/lib/email";
 import { sendPushNotification, getStockAlertPush } from "@/lib/webpush";
 
 export const dynamic = "force-dynamic";

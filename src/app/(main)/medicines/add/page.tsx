@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/hooks/useToast";
 
 const DOSAGE_FORMS = [
   { value: "TABLET", label: "Tablet" },
@@ -28,8 +29,8 @@ const FREQUENCIES = [
 
 export default function AddMedicinePage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -93,7 +94,6 @@ export default function AddMedicinePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       const res = await fetch("/api/medicines", {
@@ -105,14 +105,15 @@ export default function AddMedicinePage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to add medicine");
+        toast.error(data.error || "Failed to add medicine");
         return;
       }
 
+      toast.success("Medicine added successfully!");
       router.push("/medicines");
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -341,12 +342,6 @@ export default function AddMedicinePage() {
             />
           </CardContent>
         </Card>
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
-            {error}
-          </div>
-        )}
 
         <div className="flex gap-4">
           <Button type="submit" loading={loading} className="flex-1">

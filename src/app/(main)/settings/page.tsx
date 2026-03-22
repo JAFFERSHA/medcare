@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Settings, User, Bell, Mail, Volume2, Play } from "lucide-react";
 import { playNotificationSound, playAlertSound } from "@/lib/sound";
+import { useToast } from "@/hooks/useToast";
 
 interface UserProfile {
   id: string;
@@ -24,10 +25,10 @@ interface UserProfile {
 }
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   const [profile, setProfile] = useState({
     name: "",
@@ -119,17 +120,16 @@ export default function SettingsPage() {
           }),
         });
 
-        setMessage("Push notifications enabled!");
+        toast.success("Push notifications enabled!");
       } catch (error) {
         console.error("Error subscribing to push:", error);
-        setMessage("Failed to enable push notifications");
+        toast.error("Failed to enable push notifications");
       }
     }
   };
 
   const handleSaveProfile = async () => {
     setSaving(true);
-    setMessage("");
 
     try {
       const res = await fetch("/api/user/profile", {
@@ -139,13 +139,13 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        setMessage("Profile saved successfully!");
+        toast.success("Profile saved successfully!");
         fetchUser();
       } else {
-        setMessage("Failed to save profile");
+        toast.error("Failed to save profile");
       }
     } catch {
-      setMessage("Error saving profile");
+      toast.error("Error saving profile");
     } finally {
       setSaving(false);
     }
@@ -153,7 +153,6 @@ export default function SettingsPage() {
 
   const handleSaveNotifications = async () => {
     setSaving(true);
-    setMessage("");
 
     try {
       const res = await fetch("/api/notifications/preferences", {
@@ -163,13 +162,13 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        setMessage("Notification preferences saved!");
+        toast.success("Notification preferences saved!");
         fetchUser();
       } else {
-        setMessage("Failed to save preferences");
+        toast.error("Failed to save preferences");
       }
     } catch {
-      setMessage("Error saving preferences");
+      toast.error("Error saving preferences");
     } finally {
       setSaving(false);
     }
@@ -189,18 +188,6 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600">Manage your account and preferences</p>
       </div>
-
-      {message && (
-        <div
-          className={`p-4 rounded-lg ${
-            message.includes("Error") || message.includes("Failed")
-              ? "bg-red-50 text-red-700"
-              : "bg-green-50 text-green-700"
-          }`}
-        >
-          {message}
-        </div>
-      )}
 
       {/* Profile Settings */}
       <Card>

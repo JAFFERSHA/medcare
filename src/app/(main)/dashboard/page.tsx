@@ -14,6 +14,7 @@ import {
   Plus,
 } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/hooks/useToast";
 
 interface Medicine {
   id: string;
@@ -39,6 +40,7 @@ interface Medicine {
 }
 
 export default function DashboardPage() {
+  const toast = useToast();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +62,7 @@ export default function DashboardPage() {
 
   const handleTakeMedicine = async (medicineId: string, scheduledTime: string) => {
     try {
-      await fetch("/api/intake", {
+      const res = await fetch("/api/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -69,15 +71,20 @@ export default function DashboardPage() {
           status: "TAKEN",
         }),
       });
+      if (res.ok) {
+        toast.success("Medicine marked as taken!");
+      } else {
+        toast.error("Failed to record intake");
+      }
       fetchMedicines();
-    } catch (error) {
-      console.error("Error recording intake:", error);
+    } catch {
+      toast.error("Error recording intake");
     }
   };
 
   const handleSkipMedicine = async (medicineId: string, scheduledTime: string) => {
     try {
-      await fetch("/api/intake", {
+      const res = await fetch("/api/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,9 +93,14 @@ export default function DashboardPage() {
           status: "SKIPPED",
         }),
       });
+      if (res.ok) {
+        toast.info("Medicine skipped");
+      } else {
+        toast.error("Failed to record skip");
+      }
       fetchMedicines();
-    } catch (error) {
-      console.error("Error recording intake:", error);
+    } catch {
+      toast.error("Error recording skip");
     }
   };
 

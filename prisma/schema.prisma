@@ -8,20 +8,36 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  mobile    String   @unique
-  name      String?
-  email     String?
+  id           String  @id @default(cuid())
+  mobile       String? @unique
+  name         String?
+  email        String? @unique
+  passwordHash String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  patientMedicines  PatientMedicine[]
-  medicineIntakes   MedicineIntake[]
-  pushSubscriptions PushSubscription[]
-  notifications     Notification[]
-  notificationPrefs NotificationPreference?
-  otpRequests       OTPRequest[]
+  patientMedicines   PatientMedicine[]
+  medicineIntakes    MedicineIntake[]
+  pushSubscriptions  PushSubscription[]
+  notifications      Notification[]
+  notificationPrefs  NotificationPreference?
+  otpRequests        OTPRequest[]
+  passwordResetTokens PasswordResetToken[]
 
+  @@schema("medcare")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
   @@schema("medcare")
 }
 

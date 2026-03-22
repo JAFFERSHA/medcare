@@ -2,7 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyJWT } from "./lib/jwt";
 
-const publicPaths = ["/login", "/api/auth/login", "/api/auth/verify-otp"];
+const publicPaths = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/api/auth/login",
+  "/api/auth/verify-otp",
+  "/api/auth/register",
+  "/api/auth/login-email",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+];
 const publicPathPrefixes = ["/api/cron"];
 
 export async function middleware(request: NextRequest) {

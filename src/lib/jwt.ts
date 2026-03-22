@@ -4,7 +4,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface JWTPayload {
   userId: string;
-  mobile: string;
+  mobile?: string;
   iat?: number;
   exp?: number;
 }
