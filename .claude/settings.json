@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /c/Users/jaffe/Documents/TC-jaffer/medcare/src/app/\\\\\\(main\\\\\\)/)",
+      "Bash(grep -E \"\\\\.tsx$\")"
+    ]
+  }
+}
