@@ -1,153 +1,176 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendEmail, getMedicineReminderEmail } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 import { sendPushNotification, getMedicineReminderPush } from "@/lib/webpush";
-import { format, addMinutes, subMinutes } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
+// Runs once daily at 7 AM — sends each user a summary of all today's medicines
 export async function GET() {
   const now = new Date();
-  // Wide window so hourly cron catches all doses scheduled in the past hour
-  const windowStart = subMinutes(now, 30);
-  const windowEnd = addMinutes(now, 30);
 
   try {
-    // Find all active medicines
-    const patientMedicines = await prisma.patientMedicine.findMany({
+    // Get all users who have active medicines with reminders enabled
+    const users = await prisma.user.findMany({
       where: {
-        isActive: true,
-        reminderEnabled: true,
+        patientMedicines: {
+          some: { isActive: true, reminderEnabled: true },
+        },
       },
       include: {
-        medicine: true,
-        user: {
-          include: {
-            pushSubscriptions: { where: { isActive: true } },
-            notificationPrefs: true,
-          },
+        patientMedicines: {
+          where: { isActive: true, reminderEnabled: true },
+          include: { medicine: true },
         },
+        pushSubscriptions: { where: { isActive: true } },
+        notificationPrefs: true,
       },
     });
 
-    const remindersToSend: Array<{
-      patientMedicine: (typeof patientMedicines)[0];
-      scheduledTime: Date;
-      timeStr: string;
-    }> = [];
+    const results = await Promise.allSettled(
+      users.map(async (user) => {
+        const prefs = user.notificationPrefs;
+        const medicines = user.patientMedicines;
+        if (!medicines.length) return;
 
-    // Check each medicine's schedule
-    for (const pm of patientMedicines) {
-      for (const timeStr of pm.scheduleTimes) {
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        const scheduledTime = new Date(now);
-        scheduledTime.setHours(hours, minutes, 0, 0);
+        // Build today's schedule list
+        const scheduleRows = medicines
+          .flatMap((pm) =>
+            pm.scheduleTimes.map((t) => ({
+              name: pm.medicine.name,
+              time: t,
+              dose: `${pm.dosagePerIntake} ${pm.unitType}`,
+              form: pm.medicine.dosageForm,
+            }))
+          )
+          .sort((a, b) => a.time.localeCompare(b.time));
 
-        // Account for reminder minutes before
-        const reminderTime = subMinutes(scheduledTime, pm.reminderMinutesBefore);
+        // Create pending intake records for today
+        for (const pm of medicines) {
+          for (const timeStr of pm.scheduleTimes) {
+            const [hours, minutes] = timeStr.split(":").map(Number);
+            const scheduledTime = new Date(now);
+            scheduledTime.setHours(hours, minutes, 0, 0);
 
-        // Check if reminder time falls within the window
-        if (reminderTime >= windowStart && reminderTime <= windowEnd) {
-          // Check if we haven't already created an intake for this time today
-          const existingIntake = await prisma.medicineIntake.findFirst({
-            where: {
-              patientMedicineId: pm.id,
-              scheduledTime: scheduledTime,
-            },
+            const exists = await prisma.medicineIntake.findFirst({
+              where: { patientMedicineId: pm.id, scheduledTime },
+            });
+            if (!exists) {
+              await prisma.medicineIntake.create({
+                data: {
+                  patientMedicineId: pm.id,
+                  userId: user.id,
+                  scheduledTime,
+                  status: "PENDING",
+                },
+              });
+            }
+          }
+        }
+
+        // Send email summary
+        if (prefs?.emailEnabled && prefs?.emailForReminders && user.email) {
+          const rows = scheduleRows
+            .map(
+              (r) => `
+              <tr>
+                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#1f2937;font-weight:500;">${r.name}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;">${r.time}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;">${r.dose}</td>
+              </tr>`
+            )
+            .join("");
+
+          const html = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+            <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9fafb;">
+              <div style="background:white;border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+                <div style="text-align:center;margin-bottom:24px;">
+                  <h1 style="color:#2563eb;margin:0;font-size:26px;">MedCare</h1>
+                  <p style="color:#6b7280;margin:4px 0 0;">Your Daily Medicine Schedule</p>
+                </div>
+
+                <p style="color:#1f2937;margin:0 0 20px;">
+                  Good morning${user.name ? ", " + user.name : ""}! Here are your medicines for today:
+                </p>
+
+                <table style="width:100%;border-collapse:collapse;background:#f9fafb;border-radius:8px;overflow:hidden;">
+                  <thead>
+                    <tr style="background:#eff6ff;">
+                      <th style="padding:10px 12px;text-align:left;color:#1d4ed8;font-size:13px;">Medicine</th>
+                      <th style="padding:10px 12px;text-align:left;color:#1d4ed8;font-size:13px;">Time</th>
+                      <th style="padding:10px 12px;text-align:left;color:#1d4ed8;font-size:13px;">Dose</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+
+                <div style="margin-top:24px;text-align:center;">
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard"
+                     style="background:#2563eb;color:white;padding:12px 28px;border-radius:8px;
+                            text-decoration:none;font-weight:600;display:inline-block;">
+                    Open MedCare
+                  </a>
+                </div>
+
+                <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+                <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">
+                  Stay healthy! — MedCare Team
+                </p>
+              </div>
+            </body>
+            </html>`;
+
+          await sendEmail({
+            to: user.email,
+            subject: `Your medicine schedule for today — ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}`,
+            html,
           });
 
-          if (!existingIntake) {
-            remindersToSend.push({ patientMedicine: pm, scheduledTime, timeStr });
-          }
-        }
-      }
-    }
-
-    // Send notifications
-    const results = await Promise.allSettled(
-      remindersToSend.map(async ({ patientMedicine: pm, scheduledTime, timeStr }) => {
-        const prefs = pm.user.notificationPrefs;
-        const formattedTime = format(scheduledTime, "h:mm a");
-        const notifications: Promise<unknown>[] = [];
-
-        // Create pending intake record
-        await prisma.medicineIntake.create({
-          data: {
-            patientMedicineId: pm.id,
-            userId: pm.userId,
-            scheduledTime,
-            status: "PENDING",
-          },
-        });
-
-        // Send email notification
-        if (prefs?.emailEnabled && prefs?.emailForReminders && pm.user.email) {
-          notifications.push(
-            sendEmail({
-              to: pm.user.email,
-              subject: `Medicine Reminder: ${pm.medicine.name}`,
-              html: getMedicineReminderEmail(
-                pm.medicine.name,
-                formattedTime,
-                `${pm.dosagePerIntake} ${pm.unitType}`
-              ),
-            }).then((result) =>
-              prisma.notification.create({
-                data: {
-                  userId: pm.userId,
-                  type: "MEDICINE_REMINDER",
-                  channel: "EMAIL",
-                  title: "Medicine Reminder",
-                  body: `Time to take ${pm.medicine.name}`,
-                  status: result.success ? "SENT" : "FAILED",
-                  sentAt: result.success ? new Date() : null,
-                  error: result.success ? null : String(result.error),
-                },
-              })
-            )
-          );
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: "MEDICINE_REMINDER",
+              channel: "EMAIL",
+              title: "Daily Medicine Summary",
+              body: `${scheduleRows.length} dose(s) scheduled today`,
+              status: "SENT",
+              sentAt: new Date(),
+            },
+          });
         }
 
-        // Send push notifications
-        if (prefs?.pushEnabled && prefs?.pushForReminders) {
-          for (const sub of pm.user.pushSubscriptions) {
-            notifications.push(
-              sendPushNotification(
-                sub,
-                getMedicineReminderPush(pm.medicine.name, formattedTime)
-              ).then(async (result) => {
-                if (result.expired) {
-                  await prisma.pushSubscription.update({
-                    where: { id: sub.id },
-                    data: { isActive: false },
-                  });
-                }
-                return prisma.notification.create({
-                  data: {
-                    userId: pm.userId,
-                    type: "MEDICINE_REMINDER",
-                    channel: "PUSH",
-                    title: "Medicine Reminder",
-                    body: `Time to take ${pm.medicine.name}`,
-                    status: result.success ? "SENT" : "FAILED",
-                    sentAt: result.success ? new Date() : null,
-                    error: result.success ? null : String(result.error),
-                  },
+        // Send push notification summary
+        if (prefs?.pushEnabled && prefs?.pushForReminders && user.pushSubscriptions.length) {
+          const firstName = medicines[0].medicine.name;
+          const count = scheduleRows.length;
+          for (const sub of user.pushSubscriptions) {
+            await sendPushNotification(
+              sub,
+              getMedicineReminderPush(
+                `${count} medicine${count > 1 ? "s" : ""} scheduled today`,
+                scheduleRows[0]?.time ?? "today"
+              )
+            ).then(async (result) => {
+              if (result.expired) {
+                await prisma.pushSubscription.update({
+                  where: { id: sub.id },
+                  data: { isActive: false },
                 });
-              })
-            );
+              }
+            });
           }
         }
-
-        return Promise.all(notifications);
       })
     );
 
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
-      processed: remindersToSend.length,
-      results: results.map((r: PromiseSettledResult<unknown>) => r.status),
+      usersProcessed: users.length,
+      results: results.map((r) => r.status),
     });
   } catch (error) {
     console.error("Reminder cron error:", error);
