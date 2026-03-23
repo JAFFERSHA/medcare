@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Settings, User, Bell, Mail, Volume2, Play } from "lucide-react";
+import { Settings, User, Bell, Mail, Volume2, Play, Send, CheckCircle, XCircle } from "lucide-react";
 import { playNotificationSound, playAlertSound } from "@/lib/sound";
 import { useToast } from "@/hooks/useToast";
 
@@ -47,6 +47,10 @@ export default function SettingsPage() {
 
   const [pushSupported, setPushSupported] = useState(false);
   const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+  const [testEmailStatus, setTestEmailStatus] = useState<Record<string, "idle" | "sending" | "success" | "error">>({
+    reminder: "idle",
+    stock: "idle",
+  });
 
   useEffect(() => {
     fetchUser();
@@ -172,6 +176,33 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const sendTestEmail = async (type: "reminder" | "stock") => {
+    if (!profile.email) {
+      toast.error("Please save an email address in your profile first.");
+      return;
+    }
+    setTestEmailStatus((s) => ({ ...s, [type]: "sending" }));
+    try {
+      const res = await fetch("/api/test/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestEmailStatus((s) => ({ ...s, [type]: "success" }));
+        toast.success(`Test email sent to ${data.sentTo}`);
+      } else {
+        setTestEmailStatus((s) => ({ ...s, [type]: "error" }));
+        toast.error(data.error || "Failed to send test email");
+      }
+    } catch {
+      setTestEmailStatus((s) => ({ ...s, [type]: "error" }));
+      toast.error("Something went wrong");
+    }
+    setTimeout(() => setTestEmailStatus((s) => ({ ...s, [type]: "idle" })), 4000);
   };
 
   if (loading) {
@@ -355,6 +386,74 @@ export default function SettingsPage() {
                 />
                 <span className="text-sm text-gray-700">Low stock alerts</span>
               </label>
+            </div>
+          </div>
+
+          {/* Test Email */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-gray-600" />
+              <span className="font-medium text-gray-900">Test Email Alerts</span>
+            </div>
+            <p className="text-xs text-gray-500 pl-6">
+              Send a test email to <strong>{profile.email || "your email (not set)"}</strong> to verify alerts are working.
+            </p>
+            <div className="flex gap-3 pl-6 flex-wrap">
+              {/* Test Reminder */}
+              <button
+                type="button"
+                onClick={() => sendTestEmail("reminder")}
+                disabled={testEmailStatus.reminder === "sending"}
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg border transition-all ${
+                  testEmailStatus.reminder === "success"
+                    ? "bg-green-50 border-green-300 text-green-700"
+                    : testEmailStatus.reminder === "error"
+                    ? "bg-red-50 border-red-300 text-red-700"
+                    : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                }`}
+              >
+                {testEmailStatus.reminder === "sending" ? (
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                ) : testEmailStatus.reminder === "success" ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : testEmailStatus.reminder === "error" ? (
+                  <XCircle className="w-4 h-4" />
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                {testEmailStatus.reminder === "sending" ? "Sending..." :
+                 testEmailStatus.reminder === "success" ? "Email Sent!" :
+                 testEmailStatus.reminder === "error" ? "Failed" :
+                 "Test Reminder Email"}
+              </button>
+
+              {/* Test Stock Alert */}
+              <button
+                type="button"
+                onClick={() => sendTestEmail("stock")}
+                disabled={testEmailStatus.stock === "sending"}
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg border transition-all ${
+                  testEmailStatus.stock === "success"
+                    ? "bg-green-50 border-green-300 text-green-700"
+                    : testEmailStatus.stock === "error"
+                    ? "bg-red-50 border-red-300 text-red-700"
+                    : "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                }`}
+              >
+                {testEmailStatus.stock === "sending" ? (
+                  <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                ) : testEmailStatus.stock === "success" ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : testEmailStatus.stock === "error" ? (
+                  <XCircle className="w-4 h-4" />
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                {testEmailStatus.stock === "sending" ? "Sending..." :
+                 testEmailStatus.stock === "success" ? "Email Sent!" :
+                 testEmailStatus.stock === "error" ? "Failed" :
+                 "Test Stock Alert Email"}
+              </button>
             </div>
           </div>
 
