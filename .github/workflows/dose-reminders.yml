@@ -1,0 +1,17 @@
+name: MedCare Dose Reminders
+
+on:
+  schedule:
+    # Runs every 5 minutes — catches all scheduled dose times
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  send-dose-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger dose reminder
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://medcare-vert.vercel.app/api/cron/dose-reminders
