@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const now = new Date();
-  const windowStart = subMinutes(now, 1);
-  const windowEnd = addMinutes(now, 1);
+  // Wide window so hourly cron catches all doses scheduled in the past hour
+  const windowStart = subMinutes(now, 30);
+  const windowEnd = addMinutes(now, 30);
 
   try {
     // Find all active medicines
