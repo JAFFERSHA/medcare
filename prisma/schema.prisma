@@ -227,6 +227,11 @@ model NotificationPreference {
   pushForReminders   Boolean @default(true)
   pushForStockAlerts Boolean @default(true)
 
+  // SMS Preferences
+  smsEnabled        Boolean @default(true)
+  smsForReminders   Boolean @default(true)
+  smsForStockAlerts Boolean @default(true)
+
   // Sound Preferences
   soundEnabled Boolean @default(true)
 

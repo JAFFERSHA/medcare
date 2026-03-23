@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Settings, User, Bell, Mail, Volume2, Play, Send, CheckCircle, XCircle } from "lucide-react";
+import { Settings, User, Bell, Mail, Volume2, Play, Send, CheckCircle, XCircle, MessageSquare, Phone } from "lucide-react";
 import { playNotificationSound, playAlertSound } from "@/lib/sound";
 import { useToast } from "@/hooks/useToast";
 
@@ -42,6 +42,9 @@ export default function SettingsPage() {
     pushEnabled: true,
     pushForReminders: true,
     pushForStockAlerts: true,
+    smsEnabled: true,
+    smsForReminders: true,
+    smsForStockAlerts: true,
     soundEnabled: true,
   });
 
@@ -51,6 +54,7 @@ export default function SettingsPage() {
     reminder: "idle",
     stock: "idle",
   });
+  const [testSMSStatus, setTestSMSStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
   useEffect(() => {
     fetchUser();
@@ -176,6 +180,25 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const sendTestSMS = async () => {
+    setTestSMSStatus("sending");
+    try {
+      const res = await fetch("/api/test/send-sms", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setTestSMSStatus("success");
+        toast.success(`Test SMS sent to ${data.sentTo}`);
+      } else {
+        setTestSMSStatus("error");
+        toast.error(data.error || "Failed to send SMS");
+      }
+    } catch {
+      setTestSMSStatus("error");
+      toast.error("Something went wrong");
+    }
+    setTimeout(() => setTestSMSStatus("idle"), 4000);
   };
 
   const sendTestEmail = async (type: "reminder" | "stock") => {
@@ -386,6 +409,53 @@ export default function SettingsPage() {
                 />
                 <span className="text-sm text-gray-700">Low stock alerts</span>
               </label>
+            </div>
+          </div>
+
+          {/* SMS Notifications */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-green-600" />
+              <span className="font-medium text-gray-900">SMS Alerts</span>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">via Fast2SMS</span>
+            </div>
+            <p className="text-xs text-gray-500 pl-6">
+              SMS sent to your registered mobile number: <strong>{user?.mobile ? `+91 ${user.mobile}` : "Not set"}</strong>
+            </p>
+            <div className="space-y-2 pl-6">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={notificationPrefs.smsEnabled}
+                  onChange={(e) => setNotificationPrefs({ ...notificationPrefs, smsEnabled: e.target.checked })}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded" />
+                <span className="text-sm text-gray-700">Enable SMS alerts</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={notificationPrefs.smsForReminders}
+                  onChange={(e) => setNotificationPrefs({ ...notificationPrefs, smsForReminders: e.target.checked })}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded" />
+                <span className="text-sm text-gray-700">Medicine dose reminders</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={notificationPrefs.smsForStockAlerts}
+                  onChange={(e) => setNotificationPrefs({ ...notificationPrefs, smsForStockAlerts: e.target.checked })}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded" />
+                <span className="text-sm text-gray-700">Low stock alerts</span>
+              </label>
+            </div>
+
+            {/* Test SMS Button */}
+            <div className="pl-6">
+              <button type="button" onClick={sendTestSMS} disabled={testSMSStatus === "sending"}
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg border transition-all ${
+                  testSMSStatus === "success" ? "bg-green-50 border-green-300 text-green-700"
+                  : testSMSStatus === "error" ? "bg-red-50 border-red-300 text-red-700"
+                  : "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"}`}>
+                {testSMSStatus === "sending" ? <div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                  : testSMSStatus === "success" ? <CheckCircle className="w-4 h-4" />
+                  : testSMSStatus === "error" ? <XCircle className="w-4 h-4" />
+                  : <Phone className="w-4 h-4" />}
+                {testSMSStatus === "sending" ? "Sending SMS..." : testSMSStatus === "success" ? "SMS Sent!" : testSMSStatus === "error" ? "Failed" : "Send Test SMS"}
+              </button>
             </div>
           </div>
 

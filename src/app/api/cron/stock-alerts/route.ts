@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, getStockAlertEmail } from "@/lib/email";
 import { sendPushNotification, getStockAlertPush } from "@/lib/webpush";
+import { sendSMS, getStockAlertSMS } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,13 @@ export async function GET() {
               })
             );
           }
+        }
+
+        // SMS stock alert
+        if (prefs?.smsEnabled && prefs?.smsForStockAlerts && pm.user.mobile) {
+          notifications.push(
+            sendSMS(pm.user.mobile, getStockAlertSMS(pm.medicine.name, daysRemaining))
+          );
         }
 
         // Log notification

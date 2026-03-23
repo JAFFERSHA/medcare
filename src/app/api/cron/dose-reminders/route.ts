@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, getMedicineReminderEmail } from "@/lib/email";
 import { sendPushNotification, getMedicineReminderPush } from "@/lib/webpush";
+import { sendSMS, getMedicineReminderSMS } from "@/lib/sms";
 import { format, addMinutes, subMinutes } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -131,6 +132,29 @@ export async function GET(request: Request) {
               })
             );
           }
+        }
+
+        // SMS reminder
+        if (prefs?.smsEnabled && prefs?.smsForReminders && pm.user.mobile) {
+          tasks.push(
+            sendSMS(
+              pm.user.mobile,
+              getMedicineReminderSMS(pm.medicine.name, formattedTime, `${pm.dosagePerIntake} ${pm.unitType}`)
+            ).then((result) =>
+              prisma.notification.create({
+                data: {
+                  userId: pm.userId,
+                  type: "MEDICINE_REMINDER",
+                  channel: "IN_APP",
+                  title: `SMS: Take ${pm.medicine.name}`,
+                  body: `${pm.dosagePerIntake} ${pm.unitType} at ${formattedTime}`,
+                  status: result.success ? "SENT" : "FAILED",
+                  sentAt: result.success ? new Date() : null,
+                  error: result.success ? null : String(result.error),
+                },
+              })
+            )
+          );
         }
 
         return Promise.all(tasks);
