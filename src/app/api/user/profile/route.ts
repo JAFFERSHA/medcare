@@ -6,6 +6,12 @@ import { prisma } from "@/lib/prisma";
 const updateProfileSchema = z.object({
   name: z.string().nullable().optional(),
   email: z.string().email().nullable().optional().or(z.literal("")),
+  mobile: z
+    .string()
+    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number")
+    .nullable()
+    .optional()
+    .or(z.literal("")),
 });
 
 export async function PATCH(request: Request) {
@@ -19,11 +25,22 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const data = updateProfileSchema.parse(body);
 
+    // Check mobile uniqueness if being changed
+    if (data.mobile) {
+      const existing = await prisma.user.findFirst({
+        where: { mobile: data.mobile, NOT: { id: userId } },
+      });
+      if (existing) {
+        return NextResponse.json({ error: "This mobile number is already used by another account" }, { status: 400 });
+      }
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         name: data.name || null,
         email: data.email || null,
+        ...(data.mobile !== undefined && { mobile: data.mobile || null }),
       },
     });
 
@@ -31,6 +48,7 @@ export async function PATCH(request: Request) {
       id: updated.id,
       name: updated.name,
       email: updated.email,
+      mobile: updated.mobile,
     });
   } catch (error) {
     if (isZodError(error)) {

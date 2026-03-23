@@ -33,7 +33,9 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState({
     name: "",
     email: "",
+    mobile: "",
   });
+  const [mobileError, setMobileError] = useState("");
 
   const [notificationPrefs, setNotificationPrefs] = useState({
     emailEnabled: true,
@@ -70,6 +72,7 @@ export default function SettingsPage() {
         setProfile({
           name: data.name || "",
           email: data.email || "",
+          mobile: data.mobile || "",
         });
         if (data.notificationPrefs) {
           setNotificationPrefs(data.notificationPrefs);
@@ -137,6 +140,12 @@ export default function SettingsPage() {
   };
 
   const handleSaveProfile = async () => {
+    setMobileError("");
+    // Validate mobile if provided
+    if (profile.mobile && !/^[6-9]\d{9}$/.test(profile.mobile)) {
+      setMobileError("Enter a valid 10-digit Indian mobile number");
+      return;
+    }
     setSaving(true);
 
     try {
@@ -252,11 +261,6 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-gray-600 mb-1">Mobile Number</p>
-            <p className="font-medium text-gray-900">+91 {user?.mobile}</p>
-          </div>
-
           <Input
             label="Name"
             value={profile.name}
@@ -271,6 +275,37 @@ export default function SettingsPage() {
             onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             placeholder="your@email.com"
           />
+
+          {/* Mobile Number — editable for SMS alerts */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mobile Number
+              <span className="ml-2 text-xs font-normal text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                used for SMS alerts
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-2 bg-gray-100 border border-gray-300 border-r-0 rounded-l-lg text-gray-500 text-sm">
+                +91
+              </span>
+              <input
+                type="tel"
+                maxLength={10}
+                value={profile.mobile}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "");
+                  setProfile({ ...profile, mobile: v });
+                  setMobileError("");
+                }}
+                placeholder="10-digit mobile number"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+            {mobileError && <p className="text-xs text-red-600 mt-1">{mobileError}</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              SMS medicine reminders will be sent to this number
+            </p>
+          </div>
 
           <Button onClick={handleSaveProfile} loading={saving}>
             Save Profile
