@@ -17,8 +17,9 @@ export async function GET(request: Request) {
   }
 
   const now = new Date();
-  const windowStart = subMinutes(now, 3);
-  const windowEnd = addMinutes(now, 3);
+  // ±30 min window — safe because we deduplicate via existing intake records
+  const windowStart = subMinutes(now, 30);
+  const windowEnd = addMinutes(now, 30);
 
   try {
     const patientMedicines = await prisma.patientMedicine.findMany({
@@ -75,8 +76,13 @@ export async function GET(request: Request) {
 
         const tasks: Promise<unknown>[] = [];
 
+        // Default to enabled if no prefs record exists yet
+        const emailEnabled = prefs ? (prefs.emailEnabled && prefs.emailForReminders) : true;
+        const pushEnabled  = prefs ? (prefs.pushEnabled && prefs.pushForReminders) : true;
+        const smsEnabled   = prefs ? (prefs.smsEnabled && prefs.smsForReminders) : true;
+
         // Email reminder
-        if (prefs?.emailEnabled && prefs?.emailForReminders && pm.user.email) {
+        if (emailEnabled && pm.user.email) {
           tasks.push(
             sendEmail({
               to: pm.user.email,
@@ -104,7 +110,7 @@ export async function GET(request: Request) {
         }
 
         // Push reminder
-        if (prefs?.pushEnabled && prefs?.pushForReminders) {
+        if (pushEnabled) {
           for (const sub of pm.user.pushSubscriptions) {
             tasks.push(
               sendPushNotification(
@@ -135,7 +141,7 @@ export async function GET(request: Request) {
         }
 
         // SMS reminder
-        if (prefs?.smsEnabled && prefs?.smsForReminders && pm.user.mobile) {
+        if (smsEnabled && pm.user.mobile) {
           tasks.push(
             sendSMS(
               pm.user.mobile,
