@@ -12,6 +12,14 @@ jobs:
     steps:
       - name: Trigger dose reminder
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://medcare-vert.vercel.app/api/cron/dose-reminders
+            https://medcare-vert.vercel.app/api/cron/dose-reminders)
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS")
+          echo "Status: $HTTP_STATUS"
+          echo "Response: $BODY"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "ERROR: Expected 200 but got $HTTP_STATUS"
+            exit 1
+          fi
