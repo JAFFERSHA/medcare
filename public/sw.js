@@ -1,36 +1,47 @@
-const CACHE_NAME = "medcare-v1";
+const CACHE_NAME = "medcare-v2";
 
-// Install event
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
-});
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(clients.claim()));
 
-// Activate event
-self.addEventListener("activate", (event) => {
-  event.waitUntil(clients.claim());
-});
-
-// Push event - handle incoming push notifications
+// ── Push event ────────────────────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
   const data = event.data.json();
+  const isMedicineReminder = data.data?.type === "MEDICINE_REMINDER";
 
   const options = {
     body: data.body,
-    icon: data.icon || "/icons/icon-192x192.svg",
-    badge: data.badge || "/icons/badge-72x72.svg",
-    vibrate: [100, 50, 100],
+    icon: "/icons/medcare-logo.svg",
+    badge: "/icons/badge-72x72.svg",
+    // Alarm-style vibration for medicine reminders: long-short repeated
+    vibrate: isMedicineReminder
+      ? [800, 300, 800, 300, 800, 300, 800]
+      : [300, 100, 300],
     data: data.data,
     actions: data.actions || [],
-    requireInteraction: true,
-    tag: data.data?.type || "default",
+    requireInteraction: true,   // stays on screen — user must act
+    renotify: true,             // re-vibrate even if same tag shown before
+    tag: data.data?.patientMedicineId || data.data?.type || "medcare",
+    silent: false,
+    timestamp: Date.now(),
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
+  event.waitUntil(
+    self.registration.showNotification(data.title, options).then(() => {
+      // Tell any open app window to show in-app alarm modal
+      if (isMedicineReminder) {
+        return clients.matchAll({ type: "window" }).then((windowClients) => {
+          windowClients.forEach((client) =>
+            client.postMessage({ type: "MEDICINE_ALARM", payload: data })
+          );
+        });
+      }
+    })
+  );
 });
 
-// Notification click event
+// ── Notification click ────────────────────────────────────────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
@@ -38,47 +49,51 @@ self.addEventListener("notificationclick", (event) => {
   const notificationData = event.notification.data;
 
   if (action === "take") {
-    // Handle "Mark as Taken" action
+    // Tell the open window to mark dose as taken
     event.waitUntil(
-      fetch("/api/intake/quick-take", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(notificationData),
+      clients.matchAll({ type: "window" }).then((windowClients) => {
+        if (windowClients.length > 0) {
+          windowClients[0].postMessage({ type: "QUICK_TAKE", payload: notificationData });
+          return windowClients[0].focus();
+        }
+        return clients.openWindow(`/dashboard?take=${notificationData?.patientMedicineId}`);
       })
     );
   } else if (action === "snooze") {
-    // Show notification again in 10 minutes
+    // Re-ring in exactly 10 minutes
     event.waitUntil(
       new Promise((resolve) => {
         setTimeout(() => {
-          self.registration.showNotification(event.notification.title, {
-            body: event.notification.body + " (Snoozed)",
-            icon: event.notification.icon,
-            badge: event.notification.badge,
-            data: notificationData,
-            actions: event.notification.actions,
-            requireInteraction: true,
-          });
+          self.registration.showNotification(
+            `⏰ Snooze over: ${event.notification.title}`,
+            {
+              body: event.notification.body,
+              icon: "/icons/medcare-logo.svg",
+              badge: "/icons/badge-72x72.svg",
+              vibrate: [800, 300, 800, 300, 800, 300, 800],
+              data: notificationData,
+              actions: event.notification.actions,
+              requireInteraction: true,
+              renotify: true,
+              tag: notificationData?.patientMedicineId || "snooze",
+            }
+          );
           resolve();
         }, 10 * 60 * 1000); // 10 minutes
       })
     );
   } else {
-    // Default: open the app
+    // Default: focus or open app
     event.waitUntil(
       clients.matchAll({ type: "window" }).then((windowClients) => {
         const url = notificationData?.url || "/dashboard";
-
         for (const client of windowClients) {
-          if (client.url.includes(self.location.origin) && "focus" in client) {
+          if ("focus" in client) {
             client.navigate(url);
             return client.focus();
           }
         }
-
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
+        return clients.openWindow(url);
       })
     );
   }
