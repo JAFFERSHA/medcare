@@ -1,0 +1,48 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Build note (optional)"
+        required: false
+        default: "Manual APK build"
+
+jobs:
+  build:
+    name: Build APK with EAS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm install
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK (EAS Cloud Build)
+        working-directory: mobile
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Get APK download URL
+        working-directory: mobile
+        run: |
+          echo "================================================"
+          echo "  APK BUILD COMPLETE!"
+          echo "  Download your APK from: https://expo.dev/accounts/[your-username]/projects/medcare-mobile/builds"
+          echo "  Or run: eas build:list --platform android"
+          echo "================================================"
