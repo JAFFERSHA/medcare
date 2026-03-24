@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { api } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ type LoginMode = 'phone' | 'email';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const { showToast } = useToast();
   const [mode, setMode] = useState<LoginMode>('phone');
   const [mobile, setMobile] = useState('');
@@ -62,9 +64,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { token, user } = await api.auth.loginEmail(email, password);
-      const { storage } = await import('@/lib/storage');
-      await storage.setToken(token);
-      await storage.setUser(user);
+      await signIn(token, user);
       router.replace('/(main)/dashboard');
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Login failed', 'error');
