@@ -43,7 +43,11 @@ export async function POST(request: Request) {
       path: "/",
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      token,
+      user: { id: user.id, mobile: user.mobile, name: user.name, email: user.email },
+    });
   } catch (error) {
     console.error("Email login error:", error);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });

@@ -100,6 +100,7 @@ export default function VerifyOtpScreen() {
           We've sent a 6-digit OTP to{'\n'}
           <Text style={styles.mobile}>{mobile}</Text>
         </Text>
+        <Text style={styles.demoHint}>Demo: use code <Text style={styles.demoCode}>123456</Text></Text>
 
         <View style={styles.otpRow}>
           {otp.map((digit, i) => (
@@ -178,4 +179,6 @@ const styles = StyleSheet.create({
   resendCountdown: { fontSize: 14, color: '#64748b' },
   countdown: { color: '#0ea5e9', fontWeight: '600' },
   resendLink: { fontSize: 14, color: '#0ea5e9', fontWeight: '600' },
+  demoHint: { fontSize: 13, color: '#94a3b8', marginTop: 8 },
+  demoCode: { color: '#0ea5e9', fontWeight: '700' },
 });
