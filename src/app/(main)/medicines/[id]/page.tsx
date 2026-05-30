@@ -15,6 +15,9 @@ import {
   Plus,
   Trash2,
   AlertTriangle,
+  Edit2,
+  Save,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/useToast";
@@ -68,6 +71,16 @@ export default function MedicineDetailPage() {
   const [addingStock, setAddingStock] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    dosagePerIntake: 1,
+    scheduleTimes: ["08:00"],
+    lowStockThreshold: 7,
+    reminderEnabled: true,
+    stockAlertEnabled: true,
+    notes: "",
+  });
 
   useEffect(() => {
     fetchMedicine();
@@ -82,10 +95,43 @@ export default function MedicineDetailPage() {
       }
       const data = await res.json();
       setMedicine(data);
+      setEditForm({
+        dosagePerIntake: data.dosagePerIntake,
+        scheduleTimes: data.scheduleTimes,
+        lowStockThreshold: data.lowStockThreshold,
+        reminderEnabled: data.reminderEnabled,
+        stockAlertEnabled: data.stockAlertEnabled,
+        notes: data.notes || "",
+      });
     } catch (error) {
       console.error("Error fetching medicine:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/medicines/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editForm,
+          timesPerDay: editForm.scheduleTimes.length,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Medicine updated!");
+        setEditing(false);
+        fetchMedicine();
+      } else {
+        toast.error("Failed to update medicine");
+      }
+    } catch {
+      toast.error("Error updating medicine");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -120,9 +166,14 @@ export default function MedicineDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await fetch(`/api/medicines/${params.id}`, { method: "DELETE" });
-      toast.success("Medicine removed");
-      router.push("/medicines");
+      const res = await fetch(`/api/medicines/${params.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Medicine removed");
+        router.push("/medicines");
+      } else {
+        toast.error("Failed to remove medicine");
+        setDeleting(false);
+      }
     } catch {
       toast.error("Failed to remove medicine");
       setDeleting(false);
@@ -343,6 +394,193 @@ export default function MedicineDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Schedule & Dosage */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Edit2 className="w-5 h-5 text-blue-600" />
+              Edit Schedule & Dosage
+            </CardTitle>
+            {!editing ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setEditing(true)}
+              >
+                <Edit2 className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button size="sm" loading={saving} onClick={handleSaveEdit}>
+                  <Save className="w-4 h-4 mr-1" />
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setEditing(false);
+                    if (medicine) {
+                      setEditForm({
+                        dosagePerIntake: medicine.dosagePerIntake,
+                        scheduleTimes: medicine.scheduleTimes,
+                        lowStockThreshold: medicine.lowStockThreshold,
+                        reminderEnabled: medicine.reminderEnabled,
+                        stockAlertEnabled: medicine.stockAlertEnabled,
+                        notes: medicine.notes || "",
+                      });
+                    }
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!editing ? (
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+              <div>
+                <p className="font-medium text-gray-700">Dose per intake</p>
+                <p>{medicine.dosagePerIntake} {medicine.unitType}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Low stock alert</p>
+                <p>{medicine.lowStockThreshold} days</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Schedule times</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {medicine.scheduleTimes.map((t, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                      {formatTime(t)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Notes</p>
+                <p className="text-gray-500 italic">{medicine.notes || "—"}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label={`Dose per intake (${medicine.unitType})`}
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={editForm.dosagePerIntake}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, dosagePerIntake: parseFloat(e.target.value) || 1 })
+                  }
+                />
+                <Input
+                  label="Low stock alert (days)"
+                  type="number"
+                  min="1"
+                  value={editForm.lowStockThreshold}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, lowStockThreshold: parseInt(e.target.value) || 7 })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Schedule Times
+                </label>
+                <div className="space-y-2">
+                  {editForm.scheduleTimes.map((t, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="time"
+                        value={t}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            scheduleTimes: editForm.scheduleTimes.map((st, i) =>
+                              i === idx ? e.target.value : st
+                            ),
+                          })
+                        }
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-400">Dose {idx + 1}</span>
+                      {editForm.scheduleTimes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditForm({
+                              ...editForm,
+                              scheduleTimes: editForm.scheduleTimes.filter((_, i) => i !== idx),
+                            })
+                          }
+                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {editForm.scheduleTimes.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditForm({
+                        ...editForm,
+                        scheduleTimes: [...editForm.scheduleTimes, "12:00"],
+                      })
+                    }
+                    className="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add another time
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editForm.reminderEnabled}
+                    onChange={(e) => setEditForm({ ...editForm, reminderEnabled: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <span className="text-sm text-gray-700">Enable medicine reminders</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editForm.stockAlertEnabled}
+                    onChange={(e) => setEditForm({ ...editForm, stockAlertEnabled: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <span className="text-sm text-gray-700">Enable low stock alerts</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  placeholder="e.g., Take after meals..."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Intake History */}
       <Card>

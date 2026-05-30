@@ -79,12 +79,12 @@ export default function HistoryPage() {
     }
   };
 
-  // Calculate stats
-  const totalIntakes = intakes.length;
+  // Calculate stats (only count scheduled doses, not pending ones, for adherence)
+  const totalIntakes = intakes.filter((i) => i.status !== "PENDING").length;
   const takenCount = intakes.filter((i) => i.status === "TAKEN").length;
   const skippedCount = intakes.filter((i) => i.status === "SKIPPED").length;
   const missedCount = intakes.filter((i) => i.status === "MISSED").length;
-  const adherenceRate = totalIntakes > 0 ? Math.round((takenCount / totalIntakes) * 100) : 0;
+  const adherenceRate = totalIntakes > 0 ? Math.round((takenCount / totalIntakes) * 100) : null;
 
   return (
     <div className="space-y-6">
@@ -109,7 +109,11 @@ export default function HistoryPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-3xl font-bold text-blue-600">{adherenceRate}%</p>
+            {adherenceRate !== null ? (
+              <p className="text-3xl font-bold text-blue-600">{adherenceRate}%</p>
+            ) : (
+              <p className="text-3xl font-bold text-gray-400">—</p>
+            )}
             <p className="text-sm text-gray-600">Adherence Rate</p>
           </CardContent>
         </Card>
@@ -138,11 +142,14 @@ export default function HistoryPage() {
         <div className="flex items-center justify-center min-h-[200px]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      ) : intakes.length === 0 ? (
+      ) : intakes.filter((i) => i.status !== "PENDING").length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <History className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">No history found for this period</p>
+            <p className="text-gray-600 font-medium">No recorded doses in this period</p>
+            <p className="text-sm text-gray-400 mt-1">
+              Mark doses as Taken or Skipped on the Dashboard to see them here.
+            </p>
           </CardContent>
         </Card>
       ) : (

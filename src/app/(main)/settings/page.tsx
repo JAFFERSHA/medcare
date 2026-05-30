@@ -68,14 +68,15 @@ export default function SettingsPage() {
       const res = await fetch("/api/auth/me");
       const data = await res.json();
       if (!data.error) {
-        setUser(data);
+        const u = data.user ?? data;
+        setUser(u);
         setProfile({
-          name: data.name || "",
-          email: data.email || "",
-          mobile: data.mobile || "",
+          name: u.name || "",
+          email: u.email || "",
+          mobile: u.mobile || "",
         });
-        if (data.notificationPrefs) {
-          setNotificationPrefs(data.notificationPrefs);
+        if (u.notificationPrefs) {
+          setNotificationPrefs(u.notificationPrefs);
         }
       }
     } catch (error) {

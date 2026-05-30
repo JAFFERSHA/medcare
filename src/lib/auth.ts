@@ -32,6 +32,16 @@ export async function verifyOTP(
     return { success: false, message: "Invalid OTP" };
   }
 
+  // Verify a non-expired OTP record exists for this mobile
+  const otpRecord = await prisma.oTPRequest.findFirst({
+    where: { mobile, otp, verified: false, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!otpRecord) {
+    return { success: false, message: "OTP has expired. Please request a new one." };
+  }
+
   // Find or create user
   let user = await prisma.user.findUnique({ where: { mobile } });
 

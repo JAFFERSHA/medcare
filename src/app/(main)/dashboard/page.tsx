@@ -108,18 +108,21 @@ export default function DashboardPage() {
   const totalMedicines = medicines.length;
   const lowStockMedicines = medicines.filter((m) => m.isLowStock);
   const todaySchedule = medicines.flatMap((m) =>
-    m.scheduleTimes.map((time) => ({
-      ...m,
-      time,
-      scheduledTime: new Date(
-        new Date().toDateString() + " " + time
-      ).toISOString(),
-      intake: m.intakes.find(
-        (i) =>
-          new Date(i.scheduledTime).getHours() === parseInt(time.split(":")[0]) &&
-          new Date(i.scheduledTime).getMinutes() === parseInt(time.split(":")[1])
-      ),
-    }))
+    m.scheduleTimes.map((time) => {
+      const [h, min] = time.split(":").map(Number);
+      const d = new Date();
+      d.setHours(h, min, 0, 0);
+      return {
+        ...m,
+        time,
+        scheduledTime: d.toISOString(),
+        intake: m.intakes.find(
+          (i) =>
+            new Date(i.scheduledTime).getHours() === h &&
+            new Date(i.scheduledTime).getMinutes() === min
+        ),
+      };
+    })
   ).sort((a, b) => a.time.localeCompare(b.time));
 
   const completedToday = todaySchedule.filter(
