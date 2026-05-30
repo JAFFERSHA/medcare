@@ -24,22 +24,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function loadStoredAuth() {
     try {
       const token = await storage.getToken();
-      if (token) {
-        const storedUser = await storage.getUser<User>();
-        if (storedUser) {
-          setUser(storedUser);
-          // Verify token is still valid
-          try {
-            const { user: freshUser } = await api.auth.me();
+      const storedUser = await storage.getUser<User>();
+
+      if (token && storedUser) {
+        // Restore session immediately — no re-login on app open
+        setUser(storedUser);
+
+        // Refresh user data in background; only log out on 401 (expired token)
+        api.auth.me()
+          .then(({ user: freshUser }) => {
             setUser(freshUser);
-            await storage.setUser(freshUser);
-          } catch {
-            // Token expired - clear storage
-            await storage.clear();
-            setUser(null);
-          }
-        }
+            storage.setUser(freshUser);
+          })
+          .catch(async (err: unknown) => {
+            if (err instanceof Error && err.message.includes('401')) {
+              await storage.clear();
+              setUser(null);
+            }
+            // Network errors / server down → keep session alive
+          });
+
+        return;
       }
+
+      await storage.clear();
+      setUser(null);
     } catch {
       await storage.clear();
       setUser(null);

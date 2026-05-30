@@ -35,8 +35,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check authentication
-  const token = request.cookies.get("medcare_session")?.value;
+  // Check authentication — cookie (web) or Authorization Bearer (mobile)
+  let token = request.cookies.get("medcare_session")?.value;
+
+  if (!token) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
+    }
+  }
 
   if (!token) {
     if (pathname.startsWith("/api/")) {
