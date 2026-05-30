@@ -45,30 +45,9 @@ export async function GET() {
           )
           .sort((a, b) => a.time.localeCompare(b.time));
 
-        // Create pending intake records for today
-        for (const pm of medicines) {
-          for (const timeStr of pm.scheduleTimes) {
-            const [hours, minutes] = timeStr.split(":").map(Number);
-            const scheduledTime = new Date(now);
-            scheduledTime.setHours(hours, minutes, 0, 0);
-
-            const exists = await prisma.medicineIntake.findFirst({
-              where: { patientMedicineId: pm.id, scheduledTime },
-            });
-            if (!exists) {
-              await prisma.medicineIntake.create({
-                data: {
-                  patientMedicineId: pm.id,
-                  userId: user.id,
-                  scheduledTime,
-                  status: "PENDING",
-                },
-              });
-            }
-          }
-        }
-
         // Send email summary
+        // NOTE: intake records are created by /api/cron/dose-reminders (runs every 5 min).
+        // Pre-creating them here would block dose-reminders from sending per-dose emails.
         if (prefs?.emailEnabled && prefs?.emailForReminders && user.email) {
           const rows = scheduleRows
             .map(
@@ -123,7 +102,7 @@ export async function GET() {
             </body>
             </html>`;
 
-          await sendEmail({
+          const emailResult = await sendEmail({
             to: user.email,
             subject: `Your medicine schedule for today — ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}`,
             html,
@@ -136,8 +115,8 @@ export async function GET() {
               channel: "EMAIL",
               title: "Daily Medicine Summary",
               body: `${scheduleRows.length} dose(s) scheduled today`,
-              status: "SENT",
-              sentAt: new Date(),
+              status: emailResult.success ? "SENT" : "FAILED",
+              sentAt: emailResult.success ? new Date() : null,
             },
           });
         }

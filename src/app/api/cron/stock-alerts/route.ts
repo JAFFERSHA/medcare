@@ -90,6 +90,11 @@ export async function GET() {
                 pm.currentStock,
                 pm.unitType
               ),
+            }).then((result) => {
+              if (!result.success) {
+                console.error(`Stock alert email failed for user ${pm.userId}:`, result.error);
+              }
+              return result;
             })
           );
         }
@@ -121,7 +126,9 @@ export async function GET() {
           );
         }
 
-        // Log notification
+        const notifResults = await Promise.allSettled(notifications);
+        const allSucceeded = notifResults.every((r) => r.status === "fulfilled");
+
         await prisma.notification.create({
           data: {
             userId: pm.userId,
@@ -130,12 +137,10 @@ export async function GET() {
             title: "Low Stock Alert",
             body: `${pm.medicine.name} - ${daysRemaining} days remaining`,
             data: { patientMedicineId: pm.id, daysRemaining },
-            status: "SENT",
-            sentAt: new Date(),
+            status: allSucceeded ? "SENT" : "FAILED",
+            sentAt: allSucceeded ? new Date() : null,
           },
         });
-
-        return Promise.all(notifications);
       })
     );
 
