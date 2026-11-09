@@ -44,3 +44,9 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# Claude local reports/screenshots/dumps (never commit)
+/_dev/
+/reports/
+/screenshots/
+*.dump
