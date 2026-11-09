@@ -28,7 +28,6 @@ export default function LoginPage() {
     name: "",
     email: "",
     password: "",
-    mobile: "",
   });
 
   // Shared
@@ -290,23 +289,12 @@ export default function LoginPage() {
                   disabled={loading}
                   required
                 />
-                <Input
-                  label="Mobile Number (optional)"
-                  type="tel"
-                  placeholder="10-digit mobile number"
-                  value={registerForm.mobile}
-                  onChange={(e) =>
-                    setRegisterForm({
-                      ...registerForm,
-                      mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
-                    })
-                  }
-                  disabled={loading}
-                  maxLength={10}
-                />
                 <Button type="submit" loading={loading} className="w-full">
                   Create Account
                 </Button>
+                <p className="text-center text-xs text-gray-500">
+                  You can add and verify your mobile number later in Settings.
+                </p>
                 <div className="text-center">
                   <button
                     type="button"

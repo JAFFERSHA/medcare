@@ -3,6 +3,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, getPasswordResetEmail } from "@/lib/email";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -18,6 +19,16 @@ export async function POST(request: Request) {
     }
 
     const { email } = result.data;
+
+    // Limit reset emails per IP and per address. The response is the same either way,
+    // so this does not reveal whether an account exists.
+    const [byIp, byEmail] = await Promise.all([
+      rateLimit(`forgot:ip:${getClientIp(request.headers)}`, 10, 60 * 60),
+      rateLimit(`forgot:email:${email.toLowerCase()}`, 3, 60 * 60),
+    ]);
+    if (!byIp.ok || !byEmail.ok) {
+      return NextResponse.json({ success: true });
+    }
 
     const user = await prisma.user.findFirst({ where: { email } });
 

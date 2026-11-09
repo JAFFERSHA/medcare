@@ -32,16 +32,6 @@ export function AlarmModal() {
     return () => navigator.serviceWorker?.removeEventListener("message", handler);
   }, []);
 
-  // Play repeating alarm sound while modal is open
-  useEffect(() => {
-    if (!alarm || snoozed) {
-      stopAlarm();
-      return;
-    }
-    playAlarmLoop();
-    return () => stopAlarm();
-  }, [alarm, snoozed]);
-
   const playAlarmLoop = () => {
     playBeep();
     intervalRef.current = setInterval(playBeep, 3000);
@@ -83,6 +73,18 @@ export function AlarmModal() {
       // Audio not available
     }
   };
+
+  // Play repeating alarm sound while modal is open
+  // (declared after the helpers it calls)
+  useEffect(() => {
+    if (!alarm || snoozed) {
+      stopAlarm();
+      return;
+    }
+    playAlarmLoop();
+    return () => stopAlarm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alarm, snoozed]);
 
   const handleTake = async () => {
     if (alarm?.data?.patientMedicineId) {

@@ -25,22 +25,27 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const data = updateProfileSchema.parse(body);
 
-    // Check mobile uniqueness if being changed
+    // A mobile number can only be added or changed through /api/user/mobile, where it is
+    // verified by OTP (otherwise anyone could attach a number they do not own, and the
+    // real owner's OTP login would land in the wrong account). Here it can only be
+    // left as it is or cleared.
     if (data.mobile) {
-      const existing = await prisma.user.findFirst({
-        where: { mobile: data.mobile, NOT: { id: userId } },
-      });
-      if (existing) {
-        return NextResponse.json({ error: "This mobile number is already used by another account" }, { status: 400 });
+      const current = await prisma.user.findUnique({ where: { id: userId }, select: { mobile: true } });
+      if (current?.mobile !== data.mobile) {
+        return NextResponse.json(
+          { error: "Verify your mobile number with an OTP to add or change it." },
+          { status: 400 }
+        );
       }
     }
+    const clearMobile = data.mobile === "" || data.mobile === null;
 
     const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         name: data.name || null,
         email: data.email || null,
-        ...(data.mobile !== undefined && { mobile: data.mobile || null }),
+        ...(clearMobile && { mobile: null }),
       },
     });
 

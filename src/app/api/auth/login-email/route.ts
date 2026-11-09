@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signJWT } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { getClientIp, rateLimit, tooManyMessage } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -20,6 +21,17 @@ export async function POST(request: Request) {
     }
 
     const { email, password } = result.data;
+
+    // Slow down password guessing: per IP (any account) and per account from one IP.
+    const ip = getClientIp(request.headers);
+    const [byIp, byAccount] = await Promise.all([
+      rateLimit(`login-email:ip:${ip}`, 30, 15 * 60),
+      rateLimit(`login-email:${email.toLowerCase()}:${ip}`, 8, 15 * 60),
+    ]);
+    if (!byIp.ok || !byAccount.ok) {
+      const retry = Math.max(byIp.retryAfterSec, byAccount.retryAfterSec);
+      return NextResponse.json({ error: tooManyMessage(retry) }, { status: 429 });
+    }
 
     const user = await prisma.user.findFirst({ where: { email } });
 

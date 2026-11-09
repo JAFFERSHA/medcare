@@ -4,11 +4,14 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signJWT } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { getClientIp, rateLimit, tooManyMessage } from "@/lib/rate-limit";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  // Accepted for older clients but ignored: a mobile number is only attached to an
+  // account after it is verified by OTP (Settings → Mobile Number).
   mobile: z.string().optional(),
 });
 
@@ -22,18 +25,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    const { name, email, password, mobile } = result.data;
+    const { name, email, password } = result.data;
+
+    const limit = await rateLimit(`register:ip:${getClientIp(request.headers)}`, 10, 60 * 60);
+    if (!limit.ok) {
+      return NextResponse.json({ error: tooManyMessage(limit.retryAfterSec) }, { status: 429 });
+    }
 
     const existing = await prisma.user.findFirst({ where: { email } });
     if (existing) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
-    }
-
-    if (mobile) {
-      const mobileExists = await prisma.user.findFirst({ where: { mobile } });
-      if (mobileExists) {
-        return NextResponse.json({ error: "Mobile number already registered" }, { status: 409 });
-      }
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -42,7 +43,6 @@ export async function POST(request: Request) {
       data: {
         name,
         email,
-        mobile: mobile || null,
         passwordHash,
         notificationPrefs: {
           create: {},
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const token = await signJWT({ userId: user.id, mobile: user.mobile ?? undefined });
+    const token = await signJWT({ userId: user.id });
 
     const cookieStore = await cookies();
     cookieStore.set("medcare_session", token, {

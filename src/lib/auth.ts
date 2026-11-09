@@ -18,7 +18,10 @@ function hashOTP(mobile: string, otp: string): string {
     .digest("hex");
 }
 
-export async function sendOTP(mobile: string): Promise<{ success: boolean; message: string }> {
+export async function sendOTP(
+  mobile: string,
+  purpose: "login" | "verify" = "login"
+): Promise<{ success: boolean; message: string }> {
   const isProd = process.env.NODE_ENV === "production";
 
   // Fail closed: never fall back to a mock/fixed code in production.
@@ -48,7 +51,7 @@ export async function sendOTP(mobile: string): Promise<{ success: boolean; messa
 
   const sms = await sendSMS(
     mobile,
-    `${otp} is your MedCare login code. It is valid for 5 minutes. Do not share it with anyone. -MedCare`
+    `${otp} is your MedCare ${purpose === "login" ? "login" : "verification"} code. It is valid for 5 minutes. Do not share it with anyone. -MedCare`
   );
   if (!sms.success) {
     await prisma.oTPRequest.delete({ where: { id: record.id } });
@@ -63,10 +66,11 @@ export async function sendOTP(mobile: string): Promise<{ success: boolean; messa
   return { success: true, message: "OTP sent to your mobile number." };
 }
 
-export async function verifyOTP(
+/** Checks the latest code for this number. A wrong guess burns it (no brute force). */
+export async function checkOTP(
   mobile: string,
   otp: string
-): Promise<{ success: boolean; token?: string; message: string }> {
+): Promise<{ ok: true } | { ok: false; message: string }> {
   // Latest unused, unexpired code for this mobile number
   const otpRecord = await prisma.oTPRequest.findFirst({
     where: { mobile, verified: false, expiresAt: { gt: new Date() } },
@@ -74,7 +78,7 @@ export async function verifyOTP(
   });
 
   if (!otpRecord) {
-    return { success: false, message: "OTP has expired. Please request a new one." };
+    return { ok: false, message: "OTP has expired. Please request a new one." };
   }
 
   const expected = Buffer.from(otpRecord.otp, "hex");
@@ -82,9 +86,20 @@ export async function verifyOTP(
   const matches = expected.length === given.length && crypto.timingSafeEqual(expected, given);
 
   if (!matches) {
-    // A wrong guess burns the code, so a 6-digit code cannot be brute-forced.
     await prisma.oTPRequest.update({ where: { id: otpRecord.id }, data: { verified: true } });
-    return { success: false, message: "Incorrect OTP. Please request a new code." };
+    return { ok: false, message: "Incorrect OTP. Please request a new code." };
+  }
+
+  return { ok: true };
+}
+
+export async function verifyOTP(
+  mobile: string,
+  otp: string
+): Promise<{ success: boolean; token?: string; message: string }> {
+  const check = await checkOTP(mobile, otp);
+  if (!check.ok) {
+    return { success: false, message: check.message };
   }
 
   // Find or create user

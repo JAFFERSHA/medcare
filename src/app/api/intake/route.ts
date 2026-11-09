@@ -62,117 +62,94 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = recordIntakeSchema.parse(body);
+    const scheduledTime = new Date(data.scheduledTime);
 
-    // Verify ownership
-    const patientMedicine = await prisma.patientMedicine.findFirst({
-      where: { id: data.patientMedicineId, userId },
-    });
+    // Everything below runs in ONE transaction, with the medicine row locked, so two quick
+    // taps (or two devices) are processed one after the other: stock can't be double-counted
+    // and the intake record, stock level and stock history always agree.
+    const intake = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM medcare."PatientMedicine" WHERE id = ${data.patientMedicineId} FOR UPDATE`;
 
-    if (!patientMedicine) {
-      return NextResponse.json({ error: "Medicine not found" }, { status: 404 });
-    }
-
-    // Check if intake already exists for this time
-    const existingIntake = await prisma.medicineIntake.findFirst({
-      where: {
-        patientMedicineId: data.patientMedicineId,
-        scheduledTime: new Date(data.scheduledTime),
-      },
-    });
-
-    let intake;
-
-    if (existingIntake) {
-      // Update existing intake
-      intake = await prisma.medicineIntake.update({
-        where: { id: existingIntake.id },
-        data: {
-          takenAt: data.status === "TAKEN" ? new Date() : null,
-          status: data.status,
-          dosageTaken: data.dosageTaken ?? patientMedicine.dosagePerIntake,
-          notes: data.notes,
-          skippedReason: data.skippedReason,
-        },
+      // Verify ownership (read AFTER taking the lock so the stock figure is current)
+      const patientMedicine = await tx.patientMedicine.findFirst({
+        where: { id: data.patientMedicineId, userId },
       });
+      if (!patientMedicine) return null;
 
-      // Adjust stock only if status changed
-      if (existingIntake.status !== data.status) {
-        if (data.status === "TAKEN" && existingIntake.status !== "TAKEN") {
-          // Deduct stock
-          const dosageUsed = data.dosageTaken ?? patientMedicine.dosagePerIntake;
-          const newStock = Math.max(0, patientMedicine.currentStock - dosageUsed);
-
-          await prisma.patientMedicine.update({
-            where: { id: data.patientMedicineId },
-            data: { currentStock: newStock },
-          });
-
-          await prisma.stockHistory.create({
-            data: {
-              patientMedicineId: data.patientMedicineId,
-              changeType: "INTAKE",
-              quantity: -dosageUsed,
-              previousStock: patientMedicine.currentStock,
-              newStock,
-            },
-          });
-        } else if (data.status !== "TAKEN" && existingIntake.status === "TAKEN") {
-          // Restore stock
-          const dosageToRestore = existingIntake.dosageTaken ?? patientMedicine.dosagePerIntake;
-          const newStock = patientMedicine.currentStock + dosageToRestore;
-
-          await prisma.patientMedicine.update({
-            where: { id: data.patientMedicineId },
-            data: { currentStock: newStock },
-          });
-
-          await prisma.stockHistory.create({
-            data: {
-              patientMedicineId: data.patientMedicineId,
-              changeType: "ADJUSTMENT",
-              quantity: dosageToRestore,
-              previousStock: patientMedicine.currentStock,
-              newStock,
-              notes: "Restored from undo",
-            },
-          });
-        }
-      }
-    } else {
-      // Create new intake record
-      intake = await prisma.medicineIntake.create({
-        data: {
-          patientMedicineId: data.patientMedicineId,
-          userId,
-          scheduledTime: new Date(data.scheduledTime),
-          takenAt: data.status === "TAKEN" ? new Date() : null,
-          status: data.status,
-          dosageTaken: data.dosageTaken ?? patientMedicine.dosagePerIntake,
-          notes: data.notes,
-          skippedReason: data.skippedReason,
-        },
-      });
-
-      // Update stock if taken
-      if (data.status === "TAKEN") {
-        const dosageUsed = data.dosageTaken ?? patientMedicine.dosagePerIntake;
-        const newStock = Math.max(0, patientMedicine.currentStock - dosageUsed);
-
-        await prisma.patientMedicine.update({
+      const changeStock = async (
+        changeType: "INTAKE" | "ADJUSTMENT",
+        delta: number,
+        notes?: string
+      ) => {
+        // Never go below zero; record the change that actually happened
+        const newStock = Math.max(0, patientMedicine.currentStock + delta);
+        await tx.patientMedicine.update({
           where: { id: data.patientMedicineId },
           data: { currentStock: newStock },
         });
-
-        await prisma.stockHistory.create({
+        await tx.stockHistory.create({
           data: {
             patientMedicineId: data.patientMedicineId,
-            changeType: "INTAKE",
-            quantity: -dosageUsed,
+            changeType,
+            quantity: newStock - patientMedicine.currentStock,
             previousStock: patientMedicine.currentStock,
             newStock,
+            ...(notes && { notes }),
           },
         });
+      };
+
+      const dosageUsed = data.dosageTaken ?? patientMedicine.dosagePerIntake;
+
+      // Check if intake already exists for this time
+      const existingIntake = await tx.medicineIntake.findFirst({
+        where: { patientMedicineId: data.patientMedicineId, scheduledTime },
+      });
+
+      if (existingIntake) {
+        const updated = await tx.medicineIntake.update({
+          where: { id: existingIntake.id },
+          data: {
+            takenAt: data.status === "TAKEN" ? new Date() : null,
+            status: data.status,
+            dosageTaken: dosageUsed,
+            notes: data.notes,
+            skippedReason: data.skippedReason,
+          },
+        });
+
+        // Adjust stock only if status changed
+        if (existingIntake.status !== data.status) {
+          if (data.status === "TAKEN" && existingIntake.status !== "TAKEN") {
+            await changeStock("INTAKE", -dosageUsed);
+          } else if (data.status !== "TAKEN" && existingIntake.status === "TAKEN") {
+            const dosageToRestore = existingIntake.dosageTaken ?? patientMedicine.dosagePerIntake;
+            await changeStock("ADJUSTMENT", dosageToRestore, "Restored from undo");
+          }
+        }
+        return updated;
       }
+
+      const created = await tx.medicineIntake.create({
+        data: {
+          patientMedicineId: data.patientMedicineId,
+          userId,
+          scheduledTime,
+          takenAt: data.status === "TAKEN" ? new Date() : null,
+          status: data.status,
+          dosageTaken: dosageUsed,
+          notes: data.notes,
+          skippedReason: data.skippedReason,
+        },
+      });
+      if (data.status === "TAKEN") {
+        await changeStock("INTAKE", -dosageUsed);
+      }
+      return created;
+    });
+
+    if (!intake) {
+      return NextResponse.json({ error: "Medicine not found" }, { status: 404 });
     }
 
     return NextResponse.json(intake, { status: 201 });

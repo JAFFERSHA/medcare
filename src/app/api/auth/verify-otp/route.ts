@@ -4,6 +4,7 @@ import { isZodError, getZodErrorMessage } from "@/lib/validations";
 import { verifyOTP, setAuthCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyJWT } from "@/lib/jwt";
+import { getClientIp, rateLimit, tooManyMessage } from "@/lib/rate-limit";
 
 const schema = z.object({
   mobile: z.string().regex(/^\d{10}$/),
@@ -14,6 +15,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { mobile, otp } = schema.parse(body);
+
+    const limit = await rateLimit(`otp-verify:ip:${getClientIp(request.headers)}`, 30, 15 * 60);
+    if (!limit.ok) {
+      return NextResponse.json(
+        { success: false, message: tooManyMessage(limit.retryAfterSec) },
+        { status: 429 }
+      );
+    }
 
     const result = await verifyOTP(mobile, otp);
 

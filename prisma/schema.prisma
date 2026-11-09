@@ -297,3 +297,12 @@ enum NotificationStatus {
 
   @@schema("medcare")
 }
+
+// Fixed-window counters for rate limiting (see src/lib/rate-limit.ts)
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@schema("medcare")
+}

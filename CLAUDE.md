@@ -31,7 +31,7 @@ mark doses taken/missed, track stock, and get reminders by web push, email and S
 
 ## Gates
 1. `npx tsc --noEmit` — currently clean (must stay 0 errors)
-2. `npm run lint` — **baseline: 6 errors, 12 warnings already on main** (react-hooks rules). Only *new* problems in changed files count as FAIL.
+2. `npm run lint` — clean (0 errors; a few warnings). `mobile/` is excluded from lint.
 3. `npm run build`
 No automated test suite exists.
 
@@ -47,3 +47,5 @@ Login (email+password) → dashboard shows today's doses → mark a dose taken �
 - Users are in India (IST, UTC+5:30); cron schedules and "today" calculations must account for that.
 - Vercel Hobby: `vercel.json` crons must run at most once per day (a 5-minute cron breaks every deploy).
 - `src/middleware.ts` uses the deprecated "middleware" convention (Next 16 prefers `proxy`) — works, don't migrate unasked.
+
+- Login/register/OTP/test endpoints are rate-limited via `lib/rate-limit.ts` (table `RateLimit`, Postgres counter, fails open). New public endpoints that cost money or guess secrets should use it.

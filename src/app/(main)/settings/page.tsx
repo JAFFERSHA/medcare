@@ -36,6 +36,10 @@ export default function SettingsPage() {
     mobile: "",
   });
   const [mobileError, setMobileError] = useState("");
+  // Adding/changing a mobile number requires an OTP sent to that number
+  const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [mobileOtp, setMobileOtp] = useState("");
+  const [mobileBusy, setMobileBusy] = useState(false);
 
   const [notificationPrefs, setNotificationPrefs] = useState({
     emailEnabled: true,
@@ -140,20 +144,82 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveProfile = async () => {
+  const savedMobile = user?.mobile || "";
+  const mobileChanged = profile.mobile !== savedMobile;
+  const mobileValid = /^[6-9]\d{9}$/.test(profile.mobile);
+
+  const sendMobileOtp = async () => {
     setMobileError("");
-    // Validate mobile if provided
-    if (profile.mobile && !/^[6-9]\d{9}$/.test(profile.mobile)) {
+    if (!mobileValid) {
       setMobileError("Enter a valid 10-digit Indian mobile number");
       return;
     }
+    setMobileBusy(true);
+    try {
+      const res = await fetch("/api/user/mobile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile: profile.mobile }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMobileOtpSent(true);
+        setMobileOtp("");
+        toast.success("OTP sent to your mobile number");
+      } else {
+        setMobileError(data.error || "Could not send OTP");
+      }
+    } catch {
+      setMobileError("Could not send OTP. Please try again.");
+    } finally {
+      setMobileBusy(false);
+    }
+  };
+
+  const verifyMobileOtp = async () => {
+    setMobileError("");
+    setMobileBusy(true);
+    try {
+      const res = await fetch("/api/user/mobile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile: profile.mobile, otp: mobileOtp }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Mobile number verified!");
+        setMobileOtpSent(false);
+        setMobileOtp("");
+        fetchUser();
+      } else {
+        setMobileError(data.error || "Could not verify OTP");
+        // A wrong code is cancelled by the server, so ask for a new one
+        setMobileOtpSent(false);
+        setMobileOtp("");
+      }
+    } catch {
+      setMobileError("Could not verify OTP. Please try again.");
+    } finally {
+      setMobileBusy(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setMobileError("");
     setSaving(true);
 
     try {
+      // The mobile number is saved only through OTP verification, never from this button
+      // (the one exception: an empty field removes the saved number).
+      const clearMobile = profile.mobile === "" && savedMobile !== "";
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          name: profile.name,
+          email: profile.email,
+          ...(clearMobile && { mobile: "" }),
+        }),
       });
 
       if (res.ok) {
@@ -297,12 +363,55 @@ export default function SettingsPage() {
                   const v = e.target.value.replace(/\D/g, "");
                   setProfile({ ...profile, mobile: v });
                   setMobileError("");
+                  setMobileOtpSent(false);
+                  setMobileOtp("");
                 }}
                 placeholder="10-digit mobile number"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
             {mobileError && <p className="text-xs text-red-600 mt-1">{mobileError}</p>}
+
+            {savedMobile && !mobileChanged && (
+              <p className="text-xs text-green-600 mt-1">✓ Verified</p>
+            )}
+
+            {/* New or changed number: must be verified with an OTP before it is saved */}
+            {profile.mobile && mobileChanged && !mobileOtpSent && (
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={sendMobileOtp}
+                  loading={mobileBusy}
+                  disabled={!mobileValid}
+                >
+                  Send OTP to verify
+                </Button>
+              </div>
+            )}
+            {mobileOtpSent && mobileChanged && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={mobileOtp}
+                  onChange={(e) => setMobileOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="6-digit OTP"
+                  className="w-36 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <Button
+                  type="button"
+                  onClick={verifyMobileOtp}
+                  loading={mobileBusy}
+                  disabled={mobileOtp.length !== 6}
+                >
+                  Verify
+                </Button>
+              </div>
+            )}
+
             <p className="text-xs text-gray-400 mt-1">
               SMS medicine reminders will be sent to this number
             </p>

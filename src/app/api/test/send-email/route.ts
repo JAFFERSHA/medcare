@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, getMedicineReminderEmail, getStockAlertEmail } from "@/lib/email";
+import { rateLimit, tooManyMessage } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const userId = request.headers.get("x-user-id");
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 5 test emails per user per hour.
+  const limit = await rateLimit(`test-email:user:${userId}`, 5, 60 * 60);
+  if (!limit.ok) {
+    return NextResponse.json({ error: tooManyMessage(limit.retryAfterSec) }, { status: 429 });
+  }
 
   const { type } = await request.json();
 
