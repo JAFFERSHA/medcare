@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   const userId = request.headers.get("x-user-id");
   const { searchParams } = new URL(request.url);
   const medicineId = searchParams.get("medicineId");
-  const days = parseInt(searchParams.get("days") || "7", 10);
+  // Non-numeric input used to produce an Invalid Date and a 500; clamp to 1–365 days.
+  const parsedDays = parseInt(searchParams.get("days") || "7", 10);
+  const days = Number.isFinite(parsedDays) ? Math.min(Math.max(parsedDays, 1), 365) : 7;
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

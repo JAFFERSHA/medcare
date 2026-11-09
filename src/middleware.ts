@@ -28,7 +28,9 @@ export async function middleware(request: NextRequest) {
     // Verify cron secret for cron routes
     if (pathname.startsWith("/api/cron")) {
       const authHeader = request.headers.get("authorization");
-      if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      const cronSecret = process.env.CRON_SECRET;
+      // Fail closed: without a configured secret, "Bearer undefined" must not pass.
+      if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
         return new NextResponse("Unauthorized", { status: 401 });
       }
     }

@@ -192,11 +192,6 @@ export default function LoginPage() {
                 <Button type="submit" loading={loading} disabled={mobile.length !== 10} className="w-full">
                   Send OTP
                 </Button>
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">
-                    Demo OTP: <code className="bg-gray-100 px-2 py-1 rounded font-mono">123456</code>
-                  </p>
-                </div>
               </form>
             ) : (
               <div className="space-y-6">
@@ -212,14 +207,9 @@ export default function LoginPage() {
                   >
                     Change phone number
                   </button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleVerifyOTP("123456")}
-                    loading={loading}
-                    className="w-full"
-                  >
-                    Use Demo OTP (123456)
-                  </Button>
+                  <p className="text-center text-xs text-gray-500">
+                    A wrong code cancels it. Tap &ldquo;Change phone number&rdquo; and send a new OTP.
+                  </p>
                 </div>
               </div>
             )}
