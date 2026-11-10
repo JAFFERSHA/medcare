@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatTime, formatDate } from "@/lib/utils";
 import {
-  ArrowLeft,
-  Pill,
   Package,
   Clock,
   History,
@@ -20,6 +18,9 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PillIcon } from "@/components/ui/PillIcon";
+import { Loader } from "@/components/ui/Loader";
 import { useToast } from "@/hooks/useToast";
 
 interface Medicine {
@@ -182,9 +183,7 @@ export default function MedicineDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <Loader />
     );
   }
 
@@ -201,33 +200,23 @@ export default function MedicineDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/medicines">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {medicine.medicine.name}
-            </h1>
-            <p className="text-gray-600">
-              {medicine.medicine.dosageForm}
-              {medicine.medicine.strength && ` - ${medicine.medicine.strength}`}
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="danger"
-          size="sm"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          Remove
-        </Button>
-      </div>
+      <PageHeader
+        backHref="/medicines"
+        title={medicine.medicine.name}
+        subtitle={
+          <>
+            {medicine.medicine.dosageForm.charAt(0) + medicine.medicine.dosageForm.slice(1).toLowerCase()}
+            {medicine.medicine.strength && ` · ${medicine.medicine.strength}`}
+          </>
+        }
+        icon={<PillIcon form={medicine.medicine.dosageForm} className="h-12 w-12 shadow-none" />}
+        action={
+          <Button variant="danger" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+            <Trash2 className="w-4 h-4 mr-2" />
+            Remove
+          </Button>
+        }
+      />
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (

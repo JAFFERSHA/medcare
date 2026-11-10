@@ -18,6 +18,7 @@ mark doses taken/missed, track stock, and get reminders by web push, email and S
 - `src/app/(auth)` login/forgot/reset · `src/app/(main)` dashboard, medicines, history, settings
 - `src/app/api/*` — auth, medicines, intake, stock, notifications, user, cron, test
 - `src/lib` shared helpers · `src/components` UI · `prisma/schema.prisma`
+- UI design system: tokens/utilities in `src/app/globals.css` (`glass`, `bg-brand-gradient`, `text-gradient`, `stagger`, brand-* colours); shared pieces in `src/components/ui` (Button, Card, Input, TiltCard, PageHeader, Loader, ProgressRing, PillIcon). Phones use `layout/BottomNav`, desktop `layout/Sidebar` (both read `layout/nav.ts`). Login/password pages use `auth/AuthShell` with the three.js scene `three/MedScene` (lazy-loaded, auth pages only). Keep effects reduced-motion safe.
 
 ## Auth & roles
 - One role: a logged-in user. JWT payload = `{ userId, mobile? }`.

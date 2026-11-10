@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Pill, Plus, AlertTriangle, Clock, Search, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatTime } from "@/lib/utils";
-import { Pill, Plus, AlertTriangle, Clock, Package } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { PillIcon } from "@/components/ui/PillIcon";
+import { Loader } from "@/components/ui/Loader";
+import { formatTime, cn } from "@/lib/utils";
 
 interface Medicine {
   id: string;
@@ -24,9 +28,12 @@ interface Medicine {
   };
 }
 
+const prettyForm = (f: string) => f.charAt(0) + f.slice(1).toLowerCase();
+
 export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     fetchMedicines();
@@ -44,113 +51,126 @@ export default function MedicinesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  if (loading) return <Loader label="Loading your medicines…" />;
+
+  const q = query.trim().toLowerCase();
+  const shown = q ? medicines.filter((m) => m.medicine.name.toLowerCase().includes(q)) : medicines;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Medicines</h1>
-          <p className="text-gray-600">Manage your medicine list</p>
+      <PageHeader
+        title="My Medicines"
+        subtitle={`${medicines.length} medicine${medicines.length === 1 ? "" : "s"} in your list`}
+        icon={<Pill className="h-6 w-6" />}
+        action={
+          <Link href="/medicines/add" className="hidden sm:block">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Medicine
+            </Button>
+          </Link>
+        }
+      />
+
+      {medicines.length > 3 && (
+        <div className="relative animate-fade-up">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your medicines"
+            aria-label="Search your medicines"
+            className="glass w-full rounded-2xl py-3 pl-11 pr-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+          />
         </div>
-        <Link href="/medicines/add">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Medicine
-          </Button>
-        </Link>
-      </div>
+      )}
 
       {medicines.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Pill className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No medicines added yet
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Add your medicines to start tracking them
-            </p>
+        <Card className="animate-fade-up">
+          <CardContent className="flex flex-col items-center p-6 text-center">
+            <PillIcon form="TABLET" size="lg" className="mb-4 animate-float" />
+            <h3 className="text-lg font-semibold text-slate-900">No medicines added yet</h3>
+            <p className="mb-5 mt-1 text-slate-500">Add your medicines to start tracking them</p>
             <Link href="/medicines/add">
               <Button>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Add Your First Medicine
               </Button>
             </Link>
           </CardContent>
         </Card>
+      ) : shown.length === 0 ? (
+        <p className="py-10 text-center text-slate-500">No medicines match &ldquo;{query}&rdquo;.</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {medicines.map((medicine) => (
-            <Link key={medicine.id} href={`/medicines/${medicine.id}`}>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Pill className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {medicine.medicine.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {medicine.medicine.dosageForm}
-                          {medicine.medicine.strength &&
-                            ` - ${medicine.medicine.strength}`}
+        <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {shown.map((medicine) => {
+            const days = medicine.daysRemaining;
+            const stockPct = days === null ? 100 : Math.max(5, Math.min(100, (days / 30) * 100));
+            return (
+              <Link key={medicine.id} href={`/medicines/${medicine.id}`} className="block rounded-2xl">
+                <TiltCard className={cn("p-5", medicine.isLowStock && "ring-1 ring-orange-200")}>
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <PillIcon form={medicine.medicine.dosageForm} />
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-semibold text-slate-900">{medicine.medicine.name}</h3>
+                        <p className="text-sm text-slate-500">
+                          {prettyForm(medicine.medicine.dosageForm)}
+                          {medicine.medicine.strength && ` · ${medicine.medicine.strength}`}
                         </p>
                       </div>
                     </div>
-                    {medicine.isLowStock && (
-                      <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    {medicine.isLowStock ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
+                        <AlertTriangle className="h-3 w-3" />
+                        Low
+                      </span>
+                    ) : (
+                      <ChevronRight className="h-5 w-5 shrink-0 text-slate-300 transition group-hover/tilt:translate-x-1 group-hover/tilt:text-brand-500" />
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Package className="w-4 h-4" />
-                      <span>
-                        {medicine.currentStock} {medicine.unitType}
-                        {medicine.daysRemaining !== null && (
-                          <span
-                            className={
-                              medicine.isLowStock
-                                ? "text-orange-600 ml-1"
-                                : "text-gray-500 ml-1"
-                            }
-                          >
-                            ({medicine.daysRemaining} days left)
-                          </span>
-                        )}
+                  {/* stock */}
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                      <span className="font-semibold text-slate-800">
+                        {medicine.currentStock} <span className="font-normal text-slate-500">{medicine.unitType}</span>
                       </span>
+                      {days !== null && (
+                        <span className={cn("text-xs font-medium", medicine.isLowStock ? "text-orange-600" : "text-slate-500")}>
+                          {days} days left
+                        </span>
+                      )}
                     </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {medicine.timesPerDay}x daily -{" "}
-                        {medicine.scheduleTimes.map(formatTime).join(", ")}
-                      </span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-[width] duration-1000",
+                          medicine.isLowStock ? "bg-gradient-to-r from-rose-500 to-orange-400" : "bg-gradient-to-r from-brand-500 to-sky-400"
+                        )}
+                        style={{ width: `${stockPct}%` }}
+                      />
                     </div>
                   </div>
 
-                  {medicine.isLowStock && (
-                    <div className="mt-3 p-2 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-orange-600 font-medium">
-                        Low stock - refill soon
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  {/* schedule */}
+                  <div className="mt-4 flex flex-wrap items-center gap-1.5">
+                    <Clock className="mr-0.5 h-3.5 w-3.5 text-slate-400" />
+                    {medicine.scheduleTimes.length === 0 ? (
+                      <span className="text-xs text-slate-500">As needed</span>
+                    ) : (
+                      medicine.scheduleTimes.map((t) => (
+                        <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                          {formatTime(t)}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </TiltCard>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

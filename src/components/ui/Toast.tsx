@@ -6,19 +6,19 @@ import type { Toast, ToastType } from "@/contexts/ToastContext";
 const config: Record<ToastType, { icon: React.ReactNode; classes: string }> = {
   success: {
     icon: <CheckCircle className="w-5 h-5 shrink-0" />,
-    classes: "bg-green-50 border-green-200 text-green-800",
+    classes: "bg-emerald-50/95 border-emerald-200 text-emerald-800",
   },
   error: {
     icon: <XCircle className="w-5 h-5 shrink-0" />,
-    classes: "bg-red-50 border-red-200 text-red-800",
+    classes: "bg-rose-50/95 border-rose-200 text-rose-800",
   },
   warning: {
     icon: <AlertTriangle className="w-5 h-5 shrink-0" />,
-    classes: "bg-orange-50 border-orange-200 text-orange-800",
+    classes: "bg-amber-50/95 border-amber-200 text-amber-800",
   },
   info: {
     icon: <Info className="w-5 h-5 shrink-0" />,
-    classes: "bg-blue-50 border-blue-200 text-blue-800",
+    classes: "bg-brand-50/95 border-brand-200 text-brand-700",
   },
 };
 
@@ -26,7 +26,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   const { icon, classes } = config[toast.type];
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border min-w-[280px] max-w-sm ${classes}`}
+      className={`flex animate-pop items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_18px_40px_-16px_rgb(15_23_42/0.35)] backdrop-blur-xl min-w-[260px] max-w-sm ${classes}`}
     >
       {icon}
       <p className="text-sm font-medium flex-1">{toast.message}</p>
@@ -50,7 +50,7 @@ export function ToastContainer({
 }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed inset-x-3 top-3 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-4 sm:top-4 sm:items-end">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
       ))}

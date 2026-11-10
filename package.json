@@ -26,6 +26,7 @@
     "react-dom": "19.2.3",
     "resend": "^6.7.0",
     "tailwind-merge": "^3.4.0",
+    "three": "^0.180.0",
     "web-push": "^3.6.7",
     "zod": "^4.3.5"
   },
@@ -37,6 +38,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.180.0",
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.2",

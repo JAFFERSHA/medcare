@@ -75,7 +75,7 @@ export function OTPInput({ length = 6, onComplete, disabled = false }: OTPInputP
   };
 
   return (
-    <div className="flex gap-2 justify-center">
+    <div className="flex justify-center gap-2 [perspective:600px] sm:gap-2.5">
       {otp.map((digit, index) => (
         <input
           key={index}
@@ -90,11 +90,14 @@ export function OTPInput({ length = 6, onComplete, disabled = false }: OTPInputP
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={handlePaste}
           disabled={disabled}
+          aria-label={`Digit ${index + 1}`}
+          autoComplete={index === 0 ? "one-time-code" : "off"}
           className={cn(
-            "w-12 h-14 text-center text-2xl font-bold border rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-            "transition-colors",
-            disabled ? "bg-gray-100 text-gray-400" : "bg-white border-gray-300"
+            "h-14 w-11 rounded-xl border text-center text-2xl font-bold text-slate-900 shadow-sm sm:w-12",
+            "transition-all duration-200 focus:outline-none",
+            "focus:border-brand-400 focus:ring-4 focus:ring-brand-500/15 focus:[transform:translateY(-3px)_rotateX(12deg)]",
+            digit && "border-brand-300 bg-brand-50",
+            disabled ? "bg-slate-100 text-slate-400" : !digit && "border-slate-200 bg-white"
           )}
         />
       ))}

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { ArrowLeft, Plus, X, Info } from "lucide-react";
+import { Plus, X, Info } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/hooks/useToast";
 
 // ── Dosage form metadata ──────────────────────────────────────────────────────
@@ -225,19 +226,12 @@ export default function AddMedicinePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/medicines">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Add Medicine</h1>
-          <p className="text-gray-600">Add a new medicine to your tracker</p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/medicines"
+        title="Add Medicine"
+        subtitle="Add a new medicine to your tracker"
+        icon={<Plus className="h-6 w-6" />}
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ── Medicine Details ── */}

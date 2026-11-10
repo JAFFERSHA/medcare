@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Mail, MailCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -33,55 +33,56 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-3">
-            <Image src="/icons/medcare-logo.svg" alt="MedCare" width={64} height={64} className="rounded-2xl shadow-md" priority />
+    <AuthShell
+      title={sent ? "Check your inbox" : "Forgot password?"}
+      subtitle={sent ? undefined : "Enter your email and we'll send you a reset link."}
+    >
+      {sent ? (
+        <div className="animate-fade-up space-y-6">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center text-sm text-emerald-800">
+            <span className="flex h-12 w-12 animate-pop items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <MailCheck className="h-6 w-6" />
+            </span>
+            If an account with that email exists, a password reset link has been sent. Please check your inbox (and spam
+            folder).
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Forgot Password</h1>
-          <p className="text-gray-600 mt-2">
-            Enter your email and we&apos;ll send you a reset link
-          </p>
+          <Link href="/login" className="block">
+            <Button variant="secondary" className="w-full">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Login
+            </Button>
+          </Link>
         </div>
-
-        {sent ? (
-          <div className="space-y-6">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center">
-              If an account with that email exists, a password reset link has been sent.
-              Please check your inbox (and spam folder).
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Email address"
+            type="email"
+            autoComplete="email"
+            placeholder="you@email.com"
+            icon={<Mail className="h-4 w-4" />}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            required
+          />
+          <Button type="submit" size="lg" loading={loading} disabled={!email} className="w-full">
+            Send Reset Link
+          </Button>
+          {error && (
+            <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {error}
             </div>
-            <Link href="/login">
-              <Button variant="secondary" className="w-full">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Login
-              </Button>
+          )}
+          <div className="text-center">
+            <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Login
             </Link>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Input
-              label="Email Address"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <Button type="submit" loading={loading} disabled={!email} className="w-full">
-              Send Reset Link
-            </Button>
-            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-            <div className="text-center">
-              <Link href="/login" className="text-sm text-blue-600 hover:underline">
-                <ArrowLeft className="w-3 h-3 inline mr-1" />
-                Back to Login
-              </Link>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+        </form>
+      )}
+    </AuthShell>
   );
 }

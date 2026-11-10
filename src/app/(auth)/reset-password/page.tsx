@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import Link from "next/link";
-import Image from "next/image";
+import { Lock, CheckCircle2 } from "lucide-react";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -57,8 +58,8 @@ function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-4 text-center">
-        <p className="text-red-600">Invalid reset link. Please request a new one.</p>
-        <Link href="/forgot-password" className="text-blue-600 hover:underline text-sm">
+        <p className="text-rose-600">Invalid reset link. Please request a new one.</p>
+        <Link href="/forgot-password" className="font-semibold text-brand-600 hover:text-brand-700 text-sm">
           Request new reset link
         </Link>
       </div>
@@ -68,7 +69,8 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="space-y-4 text-center">
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+          <CheckCircle2 className="h-10 w-10 animate-pop text-emerald-500" />
           Password reset successfully! Redirecting to login...
         </div>
       </div>
@@ -80,6 +82,8 @@ function ResetPasswordForm() {
       <Input
         label="New Password (min 8 characters)"
         type="password"
+        autoComplete="new-password"
+        icon={<Lock className="h-4 w-4" />}
         placeholder="Enter new password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -89,18 +93,20 @@ function ResetPasswordForm() {
       <Input
         label="Confirm Password"
         type="password"
+        autoComplete="new-password"
+        icon={<Lock className="h-4 w-4" />}
         placeholder="Confirm new password"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         disabled={loading}
         required
       />
-      <Button type="submit" loading={loading} className="w-full">
+      <Button type="submit" size="lg" loading={loading} className="w-full">
         Reset Password
       </Button>
-      {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+      {error && <p className="text-sm text-rose-600 text-center">{error}</p>}
       <div className="text-center">
-        <Link href="/login" className="text-sm text-blue-600 hover:underline">
+        <Link href="/login" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
           Back to Login
         </Link>
       </div>
@@ -110,19 +116,10 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-3">
-            <Image src="/icons/medcare-logo.svg" alt="MedCare" width={64} height={64} className="rounded-2xl shadow-md" priority />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
-          <p className="text-gray-600 mt-2">Enter your new password below</p>
-        </div>
-        <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
-          <ResetPasswordForm />
-        </Suspense>
-      </div>
-    </div>
+    <AuthShell title="Reset password" subtitle="Choose a new password for your account.">
+      <Suspense fallback={<div className="text-center text-slate-500">Loading…</div>}>
+        <ResetPasswordForm />
+      </Suspense>
+    </AuthShell>
   );
 }

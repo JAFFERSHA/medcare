@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Settings, User, Bell, Mail, Volume2, Play, Send, CheckCircle, XCircle, MessageSquare, Phone } from "lucide-react";
 import { playNotificationSound, playAlertSound } from "@/lib/sound";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Loader } from "@/components/ui/Loader";
+import { Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 
 interface UserProfile {
@@ -306,18 +309,13 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <Loader />
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your account and preferences</p>
-      </div>
+      <PageHeader title="Settings" subtitle="Manage your account and preferences" icon={<SettingsIcon className="h-6 w-6" />} />
 
       {/* Profile Settings */}
       <Card>
